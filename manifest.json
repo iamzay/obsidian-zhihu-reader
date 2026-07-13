@@ -1,0 +1,9 @@
+{
+  "id": "zhihu-answers",
+  "name": "Zhihu Answers",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Read Zhihu questions and answers inside Obsidian.",
+  "author": "anyuanzheng",
+  "isDesktopOnly": false
+}

@@ -1,0 +1,39 @@
+.zhihu-answers {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: var(--size-4-8);
+  color: var(--text-normal);
+  background: var(--background-primary);
+}
+
+.zhihu-answers__empty-state {
+  display: flex;
+  min-height: 50vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.zhihu-answers__empty-state h2 {
+  margin: var(--size-4-4) 0 var(--size-4-2);
+  color: var(--text-normal);
+  font-size: var(--font-ui-large);
+}
+
+.zhihu-answers__empty-state p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.zhihu-answers__mark {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: var(--radius-l);
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  font-size: 1.5rem;
+  font-weight: var(--font-bold);
+}

@@ -1,0 +1,40 @@
+{
+  "name": "zhihu-answers",
+  "version": "0.1.0",
+  "description": "An Obsidian plugin for reading Zhihu questions and answers.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit && node esbuild.config.mjs production",
+    "lint": "eslint src tests vitest.config.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run lint && npm run test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "turndown": "^7.2.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.0",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/turndown": "^5.0.5",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.30.0",
+    "eslint-import-resolver-typescript": "^4.4.0",
+    "eslint-plugin-import-x": "^4.16.0",
+    "globals": "^16.2.0",
+    "obsidian": "^1.8.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.35.0",
+    "vitest": "^3.2.0"
+  }
+}
