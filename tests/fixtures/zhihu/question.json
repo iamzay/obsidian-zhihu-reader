@@ -1,0 +1,13 @@
+{
+  "type": "question",
+  "id": 123456789,
+  "title": "如何在 Obsidian 中建立阅读工作流？",
+  "detail": "<p>希望临时阅读不会污染仓库。</p>",
+  "excerpt": "希望临时阅读不会污染仓库。",
+  "topics": [
+    { "id": 19550517, "name": "Obsidian" },
+    { "id": "19556664", "name": "知识管理" }
+  ],
+  "answer_count": 18,
+  "follower_count": 204
+}

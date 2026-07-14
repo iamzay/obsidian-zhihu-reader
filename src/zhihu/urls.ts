@@ -13,10 +13,7 @@ export function buildQuestionFeedsUrl(
     throw new Error("Question ID must contain digits only.");
   }
 
-  const limit = options.limit ?? 20;
-  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-    throw new Error("Answer limit must be an integer between 1 and 100.");
-  }
+  const limit = options.limit ?? 6;
 
   const url = new URL(
     `/api/v4/questions/${questionId}/feeds`,

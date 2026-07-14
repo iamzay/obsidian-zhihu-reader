@@ -1,9 +1,7 @@
 import { requestUrl } from "obsidian";
 
-import {
-  zhihuQuestionFeedsResponseSchema,
-  type ZhihuQuestionFeedsResponse,
-} from "@/zhihu/schemas";
+import type { AnswerPage } from "@/domain/zhihu";
+import { parseQuestionFeedsResponse } from "@/zhihu/schemas";
 import {
   buildQuestionFeedsUrl,
   type FetchQuestionAnswersOptions,
@@ -31,7 +29,7 @@ export class ZhihuClient {
   async fetchQuestionAnswers(
     questionId: string,
     options: FetchQuestionAnswersOptions = {},
-  ): Promise<ZhihuQuestionFeedsResponse> {
+  ): Promise<AnswerPage> {
     const response = await requestUrl({
       url: buildQuestionFeedsUrl(questionId, options),
       method: "GET",
@@ -48,6 +46,6 @@ export class ZhihuClient {
       throw new Error(`Zhihu API request failed with status ${response.status}.`);
     }
 
-    return zhihuQuestionFeedsResponseSchema.parse(response.json);
+    return parseQuestionFeedsResponse(response.text);
   }
 }

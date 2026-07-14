@@ -1,0 +1,45 @@
+{
+  "data": [
+    {
+      "id": "feed-1",
+      "type": "feed",
+      "target": {
+        "type": "answer",
+        "id": "90071992547409931234",
+        "author": {
+          "name": "示例作者",
+          "headline": "持续整理知识"
+        },
+        "content": "<p>第一篇回答。</p>",
+        "excerpt": "第一篇回答。",
+        "voteup_count": 42,
+        "comment_count": 3,
+        "question": {
+          "id": 123456789,
+          "title": "如何在 Obsidian 中建立阅读工作流？",
+          "answer_count": 18,
+          "follower_count": 204
+        }
+      }
+    },
+    {
+      "id": "feed-2",
+      "type": "feed",
+      "target": {
+        "type": "answer",
+        "id": "90071992547409931235",
+        "author": null,
+        "content": "<p>第二篇回答。</p>",
+        "question": {
+          "id": "123456789",
+          "title": "如何在 Obsidian 中建立阅读工作流？"
+        }
+      }
+    }
+  ],
+  "paging": {
+    "is_end": false,
+    "next": "https://www.zhihu.com/api/v4/questions/123456789/feeds?limit=6&offset=6",
+    "previous": "https://www.zhihu.com/api/v4/questions/123456789/feeds?limit=6&offset=0"
+  }
+}
