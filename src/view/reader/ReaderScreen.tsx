@@ -9,8 +9,18 @@ import type {
   ZhihuTarget,
 } from "@/domain/zhihu";
 import type { ZhihuAuthSnapshot } from "@/auth/types";
+import type { AuthorAnswerListSnapshot } from "@/author/AuthorAnswerList";
+import type { AnswerCommentListSnapshot } from "@/comments/AnswerCommentList";
 import type { DailyHotListSnapshot } from "@/hotlist/DailyHotList";
 import type { QuestionHistoryEntry } from "@/history/QuestionHistory";
+import {
+  AnswerCommentsDialog,
+  type AnswerCommentsDialogActions,
+} from "@/view/reader/AnswerCommentsDialog";
+import {
+  AuthorAnswersPopover,
+  type AuthorAnswersPopoverActions,
+} from "@/view/reader/AuthorAnswersPopover";
 import {
   DailyHotPopover,
   type DailyHotPopoverActions,
@@ -39,7 +49,9 @@ export type AnswerSaveState =
 
 export interface ReaderScreenActions
   extends HistoryPopoverActions,
-    DailyHotPopoverActions {
+    DailyHotPopoverActions,
+    AuthorAnswersPopoverActions,
+    AnswerCommentsDialogActions {
   readonly openUrlModal: () => void;
   readonly openFromClipboard: () => void;
   readonly retry: () => void;
@@ -47,6 +59,7 @@ export interface ReaderScreenActions
   readonly next: () => void;
   readonly changeOrder: (order: AnswerOrder) => void;
   readonly retryNavigation: () => void;
+  readonly openComments: (answerId: string) => void;
   readonly saveCurrentAnswer: () => void;
   readonly openNote: (path: string) => void;
 }
@@ -60,6 +73,9 @@ export function ReaderScreen({
   historyEntries,
   isHistoryOpen,
   dailyHotList,
+  authorAnswerList,
+  answerCommentList,
+  isCommentsOpen,
   isDailyHotListOpen,
   saveState,
   actions,
@@ -72,6 +88,9 @@ export function ReaderScreen({
   readonly historyEntries: readonly QuestionHistoryEntry[];
   readonly isHistoryOpen: boolean;
   readonly dailyHotList: DailyHotListSnapshot;
+  readonly authorAnswerList: AuthorAnswerListSnapshot;
+  readonly answerCommentList: AnswerCommentListSnapshot;
+  readonly isCommentsOpen: boolean;
   readonly isDailyHotListOpen: boolean;
   readonly saveState: AnswerSaveState;
   readonly actions: ReaderScreenActions;
@@ -112,6 +131,9 @@ export function ReaderScreen({
           snapshot={snapshot}
           preparedAnswer={preparedAnswer}
           questionMarkdown={questionMarkdown}
+          authorAnswerList={authorAnswerList}
+          answerCommentList={answerCommentList}
+          isCommentsOpen={isCommentsOpen}
           saveState={saveState}
           actions={actions}
         />
@@ -260,6 +282,9 @@ function ReaderReadyState({
   snapshot,
   preparedAnswer,
   questionMarkdown,
+  authorAnswerList,
+  answerCommentList,
+  isCommentsOpen,
   actions,
   saveState,
 }: {
@@ -267,6 +292,9 @@ function ReaderReadyState({
   readonly snapshot: ReaderSnapshot;
   readonly preparedAnswer: PreparedAnswer | null;
   readonly questionMarkdown: string | null;
+  readonly authorAnswerList: AuthorAnswerListSnapshot;
+  readonly answerCommentList: AnswerCommentListSnapshot;
+  readonly isCommentsOpen: boolean;
   readonly actions: ReaderScreenActions;
   readonly saveState: AnswerSaveState;
 }): React.JSX.Element {
@@ -286,9 +314,19 @@ function ReaderReadyState({
         <AnswerCard
           app={app}
           prepared={preparedAnswer}
+          authorAnswerList={authorAnswerList}
           saveState={saveState}
+          actions={actions}
           onSave={actions.saveCurrentAnswer}
           onOpenNote={actions.openNote}
+        />
+      )}
+      {isCommentsOpen && preparedAnswer !== null && (
+        <AnswerCommentsDialog
+          app={app}
+          answer={preparedAnswer.answer}
+          snapshot={answerCommentList}
+          actions={actions}
         />
       )}
     </div>
@@ -340,13 +378,17 @@ function QuestionSummaryCard({
 function AnswerCard({
   app,
   prepared,
+  authorAnswerList,
   saveState,
+  actions,
   onSave,
   onOpenNote,
 }: {
   readonly app: App;
   readonly prepared: PreparedAnswer;
+  readonly authorAnswerList: AuthorAnswerListSnapshot;
   readonly saveState: AnswerSaveState;
+  readonly actions: ReaderScreenActions;
   readonly onSave: () => void;
   readonly onOpenNote: (path: string) => void;
 }): React.JSX.Element {
@@ -354,20 +396,24 @@ function AnswerCard({
   return (
     <article className="zhihu-answer-card">
       <header className="zhihu-answer-author">
-        {answer.author.avatarUrl === undefined ? (
-          <span className="zhihu-answer-author__fallback" aria-hidden="true">
-            {answer.author.name.slice(0, 1)}
-          </span>
-        ) : (
-          <img src={answer.author.avatarUrl} alt="" />
-        )}
+        <AuthorAnswersPopover
+          author={answer.author}
+          snapshot={authorAnswerList}
+          actions={actions}
+        />
         <div className="zhihu-answer-author__identity">
           <strong>{answer.author.name}</strong>
           {answer.author.headline.length > 0 && <span>{answer.author.headline}</span>}
         </div>
         <div className="zhihu-answer-author__stats">
           <span>{answer.voteupCount} 赞同</span>
-          <span>{answer.commentCount} 评论</span>
+          <button
+            type="button"
+            onClick={() => actions.openComments(answer.id)}
+            aria-label={`阅读 ${answer.commentCount} 条评论`}
+          >
+            {answer.commentCount} 评论
+          </button>
         </div>
       </header>
 

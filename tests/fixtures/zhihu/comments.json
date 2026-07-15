@@ -1,0 +1,57 @@
+{
+  "data": [
+    {
+      "id": "90071992547409939999",
+      "type": "comment",
+      "content": "<p>这是一条支持 <strong>Markdown</strong> 渲染的评论。</p>",
+      "created_time": 1713500000,
+      "like_count": 42,
+      "child_comment_count": 2,
+      "is_author": true,
+      "top": true,
+      "author": {
+        "id": "comment-author-id",
+        "url_token": "comment-author",
+        "name": "评论作者",
+        "headline": "评论作者签名",
+        "avatar_url": "https://picx.zhimg.com/comment-author.png"
+      },
+      "child_comments": [
+        {
+          "id": "90071992547409940001",
+          "content": "<p>这是第一条回复。</p>",
+          "created_time": 1713500100,
+          "like_count": 3,
+          "child_comment_count": 0,
+          "is_author": false,
+          "top": false,
+          "author": {
+            "id": "reply-author-id",
+            "url_token": "reply-author",
+            "name": "回复者",
+            "headline": "",
+            "avatar_url": "https://picx.zhimg.com/reply-author.png"
+          },
+          "reply_to_author": {
+            "id": "comment-author-id",
+            "url_token": "comment-author",
+            "name": "评论作者",
+            "headline": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "90071992547409940002",
+      "type": "comment",
+      "content": "<p>第二条根评论。</p>",
+      "like_count": 0,
+      "child_comment_count": 0,
+      "author": null
+    }
+  ],
+  "paging": {
+    "is_end": false,
+    "next": "https://www.zhihu.com/api/v4/comment_v5/answers/90071992547409931234/root_comment?order_by=score&limit=10&offset=10"
+  }
+}

@@ -48,6 +48,19 @@ GET https://www.zhihu.com/api/v4/questions/{questionId}/feeds?limit=20&order=def
 GET https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50&mobile=true
 ```
 
+作者头像 Popover 按需分页读取公开回答：
+
+```text
+GET https://www.zhihu.com/api/v4/members/{url_token}/answers?sort_by=created&limit=10
+```
+
+回答评论与子回复在用户打开对应界面后按需读取：
+
+```text
+GET https://www.zhihu.com/api/v4/comment_v5/answers/{answerId}/root_comment?order_by=score&limit=10
+GET https://www.zhihu.com/api/v4/comment_v5/comment/{commentId}/child_comment?limit=10
+```
+
 - 返回体主要由 `data` 和 `paging` 组成，回答数据位于 `data[*].target`。
 - 请求统一携带浏览器 User-Agent；需要登录态时额外携带知乎 Cookie。
 - 登录态请求会复用插件保存的知乎 Cookie，并根据 `d_c0` 生成 `x-zse-93` / `x-zse-96` 请求头；本项目不实现知乎写操作。
@@ -61,6 +74,8 @@ src/
   main.ts                    # 插件入口与视图注册
   view/                      # React 视图
   hotlist/                   # 每日热榜状态、缓存与错误恢复
+  author/                    # 作者回答按需加载与分页状态
+  comments/                  # 回答评论、子回复与排序分页状态
   zhihu/                     # API 客户端和 Zod schema
   markdown/                  # HTML → Markdown
 tests/                       # Vitest 单元测试

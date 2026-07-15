@@ -24,6 +24,8 @@
 | `PluginDataRepository` | `load`、`save` | Zod 默认值、迁移、Obsidian `loadData/saveData` |
 | `QuestionHistory` | `record`、`list`、`remove`、`clear` | 问题 ID 去重、排序、上限和持久化 |
 | `DailyHotList` | `load`、`snapshot`、`subscribe` | 请求合并、短时缓存、刷新、过期结果和错误恢复 |
+| `AuthorAnswerList` | `showAuthor`、`loadMore`、`retry` | 延迟加载、作者切换、分页游标、去重和局部错误恢复 |
+| `AnswerCommentList` | `showAnswer`、`loadMore`、`toggleReplies` | 排序、根评论/子回复分页、去重、并发和局部错误恢复 |
 | `AnswerNoteWriter` | `save` | 路径模板、frontmatter、冲突、原子写入和附件 |
 
 `ZhihuGateway` 面向真正的外部依赖知乎。其实现内部设置 `ZhihuTransport` seam：生产使用 Obsidian `requestUrl` adapter，测试使用 fixture adapter。调用者不接触 HTTP URL、原始 JSON 或 Zod schema。
@@ -49,7 +51,10 @@ flowchart LR
     T08 --> T10["ZA-10 体验与兼容性收口"]
     T09 --> T12["ZA-12 每日热榜"]
     T04 --> T12
-    T12 --> T10
+    T12 --> T13["ZA-13 作者回答 Popover"]
+    T03 --> T13
+    T13 --> T14["ZA-14 回答评论阅读"]
+    T14 --> T10
     T10 --> T11["ZA-11 发布准备"]
 ```
 
@@ -331,6 +336,46 @@ tests/zhihu-schemas.test.ts
 - 未登录、网络错误、空列表和结构变化均提供可恢复界面，不替换当前回答。
 - 点击条目成功进入问题页后才记录问题历史。
 
+### ZA-13 作者回答 Click Popover
+
+目标：从当前回答作者自然发现其其他公开回答，并复用统一阅读面板继续阅读。
+
+实现内容：
+
+- 在作者领域模型中保留 `url_token`，扩展 `ZhihuGateway.getAuthorAnswerPage()` 和对应 Zod fixture。
+- 实现 `AuthorAnswerList`，封装首屏按需加载、`paging.next`、并发合并、回答去重、作者切换和错误恢复。
+- 实现头像 Click Popover，每条展示问题标题和回答摘要。
+- 列表接近底部时加载下一页，同时提供显式加载与重试按钮。
+- 点击条目以回答目标复用 `ReaderSession.open()`，成功后按问题记录查询历史。
+
+验收标准：
+
+- 未点击头像时不发请求，同一作者重复打开不重复加载首屏。
+- 非安全数字 ID 不丢失精度；分页只接受匹配作者的知乎 URL。
+- 分页失败保留已有回答，重复回答不显示，切换作者后旧响应不覆盖新列表。
+- 匿名作者不触发请求；鼠标点击、键盘激活、Escape 和点击外部关闭均可用。
+- 浏览列表不写 Vault 和历史，点击并成功加载回答后才记录所属问题。
+
+### ZA-14 回答评论阅读
+
+目标：在不离开当前回答的情况下按需阅读根评论和完整子回复。
+
+实现内容：
+
+- 定义评论领域模型，扩展回答根评论与子回复 Gateway、URL builder、Zod schema 和 fixtures。
+- 实现 `AnswerCommentList`，管理热门/时间排序、根评论分页、子回复按需展开、去重、重试和过期响应。
+- 将回答评论数改为入口，桌面端打开右侧抽屉、窄屏打开底部抽屉。
+- 评论内容转换为 Markdown 并交给 Obsidian 原生渲染器；提供加载、空、错误和分页状态。
+- 回答切换时关闭旧评论抽屉；关闭 View 时销毁请求状态，评论阅读不写历史或 Vault。
+
+验收标准：
+
+- 未打开评论和未展开回复时不发请求；分页只跟随匹配资源的知乎 `paging.next` URL。
+- 排序切换重新加载首屏，重复评论被去重，分页失败保留已有评论并能重试。
+- 已包含全部回复时直接使用预览数据；存在更多回复时才请求子回复接口。
+- Escape、遮罩、关闭按钮、焦点陷阱和移动端底部抽屉可用。
+- 评论内容不直接注入 HTML，不支持点赞、回复或发布等写操作。
+
 ## 5. 推荐里程碑
 
 ### Milestone A：可查询、可阅读
@@ -347,7 +392,7 @@ tests/zhihu-schemas.test.ts
 
 ### Milestone D：可发布版本
 
-完成 ZA-09 至 ZA-12。登录、每日热榜、兼容性、无障碍和发布流程完成。
+完成 ZA-09 至 ZA-14。登录、每日热榜、作者回答发现、评论阅读、兼容性、无障碍和发布流程完成。
 
 ## 6. 第一项建议
 

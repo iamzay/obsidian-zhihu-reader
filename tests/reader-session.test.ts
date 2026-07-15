@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type {
   AnswerDocument,
   AnswerPage,
+  AuthorAnswerPage,
   QuestionSummary,
 } from "@/domain/zhihu";
 import { ReaderSession } from "@/reader/ReaderSession";
@@ -44,8 +45,20 @@ class FakeGateway implements ZhihuGateway {
     return Promise.resolve(this.anchor);
   }
 
+  getAnswerCommentPage(): Promise<never> {
+    return Promise.reject(new Error("Not used"));
+  }
+
+  getChildCommentPage(): Promise<never> {
+    return Promise.reject(new Error("Not used"));
+  }
+
   getHotList(): Promise<readonly never[]> {
     return Promise.resolve([]);
+  }
+
+  getAuthorAnswerPage(): Promise<AuthorAnswerPage> {
+    return Promise.reject(new Error("Not used"));
   }
 
   async getAnswerPage(

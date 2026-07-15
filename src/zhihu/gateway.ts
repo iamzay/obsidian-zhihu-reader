@@ -1,11 +1,15 @@
 import type {
   AnswerDocument,
   AnswerPage,
+  AuthorAnswerPage,
+  CommentPage,
   QuestionSummary,
   ZhihuHotListItem,
 } from "@/domain/zhihu";
 import {
   parseAnswerResponse,
+  parseAuthorAnswersResponse,
+  parseCommentsResponse,
   parseHotListResponse,
   parseQuestionResponse,
   parseQuestionFeedsResponse,
@@ -19,10 +23,16 @@ import {
 } from "@/zhihu/fetchSignature";
 import {
   buildAnswerUrl,
+  buildAnswerCommentsUrl,
+  buildAuthorAnswersUrl,
+  buildChildCommentsUrl,
   buildHotListUrl,
   buildQuestionFeedsUrl,
   buildQuestionUrl,
   type FetchQuestionAnswersOptions,
+  type FetchAuthorAnswersOptions,
+  type FetchAnswerCommentsOptions,
+  type FetchChildCommentsOptions,
 } from "@/zhihu/urls";
 
 const ZHIHU_WEB_ORIGIN = "https://www.zhihu.com";
@@ -48,6 +58,18 @@ export class ZhihuGatewayError extends Error {
 export interface ZhihuGateway {
   getQuestion(questionId: string): Promise<QuestionSummary>;
   getAnswer(answerId: string): Promise<AnswerDocument>;
+  getAnswerCommentPage(
+    answerId: string,
+    options?: FetchAnswerCommentsOptions,
+  ): Promise<CommentPage>;
+  getChildCommentPage(
+    commentId: string,
+    options?: FetchChildCommentsOptions,
+  ): Promise<CommentPage>;
+  getAuthorAnswerPage(
+    authorIdentifier: string,
+    options?: FetchAuthorAnswersOptions,
+  ): Promise<AuthorAnswerPage>;
   getHotList(limit?: number): Promise<readonly ZhihuHotListItem[]>;
   getAnswerPage(
     questionId: string,
@@ -93,6 +115,36 @@ export class HttpZhihuGateway implements ZhihuGateway {
     }
   }
 
+  async getAnswerCommentPage(
+    answerId: string,
+    options: FetchAnswerCommentsOptions = {},
+  ): Promise<CommentPage> {
+    const text = await this.request(
+      buildAnswerCommentsUrl(answerId, options),
+      `${ZHIHU_WEB_ORIGIN}/answer/${answerId}`,
+    );
+    try {
+      return parseCommentsResponse(text);
+    } catch (error: unknown) {
+      throw responseError(error);
+    }
+  }
+
+  async getChildCommentPage(
+    commentId: string,
+    options: FetchChildCommentsOptions = {},
+  ): Promise<CommentPage> {
+    const text = await this.request(
+      buildChildCommentsUrl(commentId, options),
+      ZHIHU_WEB_ORIGIN,
+    );
+    try {
+      return parseCommentsResponse(text);
+    } catch (error: unknown) {
+      throw responseError(error);
+    }
+  }
+
   async getHotList(limit = 50): Promise<readonly ZhihuHotListItem[]> {
     const text = await this.request(
       buildHotListUrl(limit),
@@ -100,6 +152,21 @@ export class HttpZhihuGateway implements ZhihuGateway {
     );
     try {
       return parseHotListResponse(text);
+    } catch (error: unknown) {
+      throw responseError(error);
+    }
+  }
+
+  async getAuthorAnswerPage(
+    authorIdentifier: string,
+    options: FetchAuthorAnswersOptions = {},
+  ): Promise<AuthorAnswerPage> {
+    const text = await this.request(
+      buildAuthorAnswersUrl(authorIdentifier, options),
+      `${ZHIHU_WEB_ORIGIN}/people/${encodeURIComponent(authorIdentifier)}/answers`,
+    );
+    try {
+      return parseAuthorAnswersResponse(text);
     } catch (error: unknown) {
       throw responseError(error);
     }
@@ -148,12 +215,12 @@ export class HttpZhihuGateway implements ZhihuGateway {
       case 403:
         throw new ZhihuGatewayError(
           "forbidden",
-          "该回答暂时无法访问，登录后可能可以阅读。",
+          "该内容暂时无法访问，登录后可能可以阅读。",
         );
       case 404:
         throw new ZhihuGatewayError(
           "not-found",
-          "回答不存在、已删除或链接已失效。",
+          "内容不存在、已删除或链接已失效。",
         );
       case 429:
         throw new ZhihuGatewayError(
@@ -183,7 +250,7 @@ function responseError(error: unknown): ZhihuGatewayError {
   if (error instanceof ZhihuResponseValidationError) {
     return new ZhihuGatewayError(
       "response",
-      "知乎返回的数据结构发生变化，暂时无法显示该回答。",
+      "知乎返回的数据结构发生变化，暂时无法显示该内容。",
       { cause: error },
     );
   }

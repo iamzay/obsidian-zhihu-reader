@@ -5,10 +5,20 @@ import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type {
   AnswerDocument,
   AnswerOrder,
+  CommentOrder,
   ReaderSnapshot,
+  ZhihuComment,
   ZhihuTarget,
 } from "@/domain/zhihu";
 import type { ZhihuAuthSnapshot } from "@/auth/types";
+import {
+  AuthorAnswerList,
+  type AuthorAnswerListSnapshot,
+} from "@/author/AuthorAnswerList";
+import {
+  AnswerCommentList,
+  type AnswerCommentListSnapshot,
+} from "@/comments/AnswerCommentList";
 import {
   DailyHotList,
   type DailyHotListSnapshot,
@@ -48,15 +58,22 @@ export class ZhihuAnswersView extends ItemView {
   private root: Root | null = null;
   private readonly session: ReaderSession;
   private readonly dailyHotList: DailyHotList;
+  private readonly authorAnswerList: AuthorAnswerList;
+  private readonly answerCommentList: AnswerCommentList;
   private unsubscribeSession: (() => void) | null = null;
   private unsubscribeDailyHotList: (() => void) | null = null;
+  private unsubscribeAuthorAnswerList: (() => void) | null = null;
+  private unsubscribeAnswerCommentList: (() => void) | null = null;
   private snapshot: ReaderSnapshot;
   private dailyHotListSnapshot: DailyHotListSnapshot;
+  private authorAnswerListSnapshot: AuthorAnswerListSnapshot;
+  private answerCommentListSnapshot: AnswerCommentListSnapshot;
   private authSnapshot: ZhihuAuthSnapshot;
   private previousAnswerId: string | null = null;
   private historyEntries: readonly QuestionHistoryEntry[];
   private isHistoryOpen = false;
   private isDailyHotListOpen = false;
+  private isCommentsOpen = false;
   private shouldRecordQuery = false;
   private savingAnswerId: string | null = null;
   private readonly savedPaths = new Map<string, string>();
@@ -74,8 +91,12 @@ export class ZhihuAnswersView extends ItemView {
     super(leaf);
     this.session = new ReaderSession(gateway, optionsProvider);
     this.dailyHotList = new DailyHotList(gateway);
+    this.authorAnswerList = new AuthorAnswerList(gateway);
+    this.answerCommentList = new AnswerCommentList(gateway);
     this.snapshot = this.session.snapshot();
     this.dailyHotListSnapshot = this.dailyHotList.snapshot();
+    this.authorAnswerListSnapshot = this.authorAnswerList.snapshot();
+    this.answerCommentListSnapshot = this.answerCommentList.snapshot();
     this.authSnapshot = initialAuth;
     this.historyEntries = initialHistory;
   }
@@ -98,6 +119,9 @@ export class ZhihuAnswersView extends ItemView {
       const currentAnswerId = snapshot.answers[snapshot.currentIndex]?.id ?? null;
       const shouldResetScroll =
         this.previousAnswerId !== null && currentAnswerId !== this.previousAnswerId;
+      if (shouldResetScroll) {
+        this.isCommentsOpen = false;
+      }
       this.previousAnswerId = currentAnswerId;
       this.snapshot = snapshot;
       if (
@@ -121,6 +145,18 @@ export class ZhihuAnswersView extends ItemView {
       this.dailyHotListSnapshot = snapshot;
       this.render();
     });
+    this.unsubscribeAuthorAnswerList = this.authorAnswerList.subscribe(
+      (snapshot) => {
+        this.authorAnswerListSnapshot = snapshot;
+        this.render();
+      },
+    );
+    this.unsubscribeAnswerCommentList = this.answerCommentList.subscribe(
+      (snapshot) => {
+        this.answerCommentListSnapshot = snapshot;
+        this.render();
+      },
+    );
     this.render();
     return Promise.resolve();
   }
@@ -130,8 +166,14 @@ export class ZhihuAnswersView extends ItemView {
     this.unsubscribeSession = null;
     this.unsubscribeDailyHotList?.();
     this.unsubscribeDailyHotList = null;
+    this.unsubscribeAuthorAnswerList?.();
+    this.unsubscribeAuthorAnswerList = null;
+    this.unsubscribeAnswerCommentList?.();
+    this.unsubscribeAnswerCommentList = null;
     this.session.dispose();
     this.dailyHotList.dispose();
+    this.authorAnswerList.dispose();
+    this.answerCommentList.dispose();
     this.root?.unmount();
     this.root = null;
     return Promise.resolve();
@@ -293,6 +335,51 @@ export class ZhihuAnswersView extends ItemView {
         this.isDailyHotListOpen = false;
         void this.openTarget({ type: "question", questionId });
       },
+      showAuthorAnswers: (author) => {
+        void this.authorAnswerList.showAuthor(author);
+      },
+      loadMoreAuthorAnswers: () => {
+        void this.authorAnswerList.loadMore();
+      },
+      retryAuthorAnswers: () => {
+        void this.authorAnswerList.retry();
+      },
+      openAuthorAnswer: (answer) => {
+        void this.openTarget({
+          type: "answer",
+          answerId: answer.answerId,
+          questionId: answer.questionId,
+        });
+      },
+      openComments: (answerId: string) => {
+        this.isCommentsOpen = true;
+        this.isHistoryOpen = false;
+        this.isDailyHotListOpen = false;
+        void this.answerCommentList.showAnswer(answerId);
+        this.render();
+      },
+      closeComments: () => {
+        this.isCommentsOpen = false;
+        this.render();
+      },
+      changeCommentOrder: (order: CommentOrder) => {
+        void this.answerCommentList.changeOrder(order);
+      },
+      loadMoreComments: () => {
+        void this.answerCommentList.loadMore();
+      },
+      retryComments: () => {
+        void this.answerCommentList.retry();
+      },
+      toggleCommentReplies: (comment: ZhihuComment) => {
+        void this.answerCommentList.toggleReplies(comment);
+      },
+      loadMoreCommentReplies: (commentId: string) => {
+        void this.answerCommentList.loadMoreReplies(commentId);
+      },
+      retryCommentReplies: (commentId: string) => {
+        void this.answerCommentList.retryReplies(commentId);
+      },
       saveCurrentAnswer: () => {
         void this.saveCurrentAnswer();
       },
@@ -312,6 +399,9 @@ export class ZhihuAnswersView extends ItemView {
           historyEntries={this.historyEntries}
           isHistoryOpen={this.isHistoryOpen}
           dailyHotList={this.dailyHotListSnapshot}
+          authorAnswerList={this.authorAnswerListSnapshot}
+          answerCommentList={this.answerCommentListSnapshot}
+          isCommentsOpen={this.isCommentsOpen}
           isDailyHotListOpen={this.isDailyHotListOpen}
           saveState={this.currentSaveState()}
           actions={this.readerActions()}

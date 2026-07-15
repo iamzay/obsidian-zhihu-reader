@@ -3,8 +3,12 @@ import { z } from "zod";
 import type {
   AnswerDocument,
   AnswerPage,
+  AuthorAnswerPage,
+  AuthorAnswerSummary,
+  CommentPage,
   QuestionReference,
   QuestionSummary,
+  ZhihuComment,
   ZhihuHotListItem,
   ZhihuAuthor,
 } from "@/domain/zhihu";
@@ -34,7 +38,7 @@ const zhihuAuthorSchema = z
     headline: z.string().catch(""),
     avatar_url: optionalUrlSchema,
     url: optionalUrlSchema,
-    url_token: z.string().optional().catch(undefined),
+    url_token: z.string().min(1).optional().catch(undefined),
   })
   .passthrough();
 
@@ -129,6 +133,61 @@ const zhihuHotListResponseSchema = z.object({
   data: z.array(zhihuHotListItemSchema),
 });
 
+const zhihuAuthorAnswerSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]).optional(),
+    url: z.string().optional(),
+    excerpt: z.string().catch(""),
+    voteup_count: nonNegativeIntegerSchema,
+    created_time: optionalTimestampSchema,
+    question: z
+      .object({
+        id: z.union([z.string(), z.number()]).optional(),
+        title: z.string().min(1),
+        url: z.string().optional(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+const zhihuAuthorAnswersResponseSchema = z.object({
+  data: z.array(zhihuAuthorAnswerSchema),
+  paging: z
+    .object({
+      is_end: z.boolean().catch(false),
+      next: optionalUrlSchema,
+    })
+    .passthrough(),
+});
+
+const zhihuCommentBaseSchema = z
+  .object({
+    id: zhihuIdSchema,
+    content: z.string().catch(""),
+    created_time: optionalTimestampSchema,
+    like_count: nonNegativeIntegerSchema,
+    child_comment_count: nonNegativeIntegerSchema,
+    is_author: z.boolean().catch(false),
+    top: z.boolean().catch(false),
+    author: zhihuAuthorSchema.nullish(),
+    reply_to_author: zhihuAuthorSchema.nullish(),
+  })
+  .passthrough();
+
+const zhihuCommentSchema = zhihuCommentBaseSchema.extend({
+  child_comments: z.array(zhihuCommentBaseSchema).catch([]),
+});
+
+const zhihuCommentsResponseSchema = z.object({
+  data: z.array(zhihuCommentSchema),
+  paging: z
+    .object({
+      is_end: z.boolean().catch(false),
+      next: optionalUrlSchema,
+    })
+    .passthrough(),
+});
+
 const zhihuErrorResponseSchema = z.object({
   error: z
     .object({
@@ -205,6 +264,30 @@ export function parseHotListResponse(text: string): readonly ZhihuHotListItem[] 
         ...(thumbnailUrl === undefined ? {} : { thumbnailUrl }),
       }];
     });
+  });
+}
+
+export function parseAuthorAnswersResponse(text: string): AuthorAnswerPage {
+  return validateResponse(() => {
+    const response = zhihuAuthorAnswersResponseSchema.parse(
+      parseResponseJson(text),
+    );
+    return {
+      answers: response.data.map(toAuthorAnswerSummary),
+      isEnd: response.paging.is_end,
+      nextPageUrl: response.paging.next ?? null,
+    };
+  });
+}
+
+export function parseCommentsResponse(text: string): CommentPage {
+  return validateResponse(() => {
+    const response = zhihuCommentsResponseSchema.parse(parseResponseJson(text));
+    return {
+      comments: response.data.map(toComment),
+      isEnd: response.paging.is_end,
+      nextPageUrl: response.paging.next ?? null,
+    };
   });
 }
 
@@ -291,11 +374,94 @@ function toAuthor(
       : `${ZHIHU_WEB_ORIGIN}/people/${author.url_token}`;
   return {
     ...(author.id === undefined ? {} : { id: author.id }),
+    ...(author.url_token === undefined ? {} : { urlToken: author.url_token }),
     name: author.name,
     headline: author.headline,
     ...(author.avatar_url === undefined ? {} : { avatarUrl: author.avatar_url }),
     ...(profileUrl === undefined ? {} : { profileUrl }),
   };
+}
+
+function toAuthorAnswerSummary(
+  answer: z.output<typeof zhihuAuthorAnswerSchema>,
+): AuthorAnswerSummary {
+  const answerId = exactId(
+    answer.id,
+    answer.url,
+    /\/answers?\/(\d+)(?:\/|$)/u,
+    "answer",
+  );
+  const questionId = exactId(
+    answer.question.id,
+    answer.question.url,
+    /\/questions?\/(\d+)(?:\/|$)/u,
+    "question",
+  );
+  return {
+    answerId,
+    questionId,
+    questionTitle: answer.question.title,
+    excerpt: answer.excerpt,
+    voteupCount: answer.voteup_count,
+    ...(answer.created_time === undefined
+      ? {}
+      : { createdTime: answer.created_time }),
+  };
+}
+
+function toComment(
+  comment: z.output<typeof zhihuCommentSchema>,
+): ZhihuComment {
+  return {
+    id: comment.id,
+    author: toAuthor(comment.author),
+    ...(comment.reply_to_author == null
+      ? {}
+      : { replyToAuthor: toAuthor(comment.reply_to_author) }),
+    contentHtml: comment.content,
+    ...(comment.created_time === undefined
+      ? {}
+      : { createdTime: comment.created_time }),
+    likeCount: comment.like_count,
+    childCommentCount: comment.child_comment_count,
+    childComments: comment.child_comments.map((child) => ({
+      id: child.id,
+      author: toAuthor(child.author),
+      ...(child.reply_to_author == null
+        ? {}
+        : { replyToAuthor: toAuthor(child.reply_to_author) }),
+      contentHtml: child.content,
+      ...(child.created_time === undefined
+        ? {}
+        : { createdTime: child.created_time }),
+      likeCount: child.like_count,
+      childCommentCount: child.child_comment_count,
+      childComments: [],
+      isAnswerAuthor: child.is_author,
+      isTop: child.top,
+    })),
+    isAnswerAuthor: comment.is_author,
+    isTop: comment.top,
+  };
+}
+
+function exactId(
+  value: string | number | undefined,
+  url: string | undefined,
+  urlPattern: RegExp,
+  label: string,
+): string {
+  if (typeof value === "string" && /^\d+$/u.test(value)) {
+    return value;
+  }
+  const urlId = urlPattern.exec(url ?? "")?.[1];
+  if (urlId !== undefined) {
+    return urlId;
+  }
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
+    return String(value);
+  }
+  throw new Error(`Zhihu author answer does not contain an exact ${label} ID.`);
 }
 
 function hotQuestionId(

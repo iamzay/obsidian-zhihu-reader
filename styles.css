@@ -118,7 +118,8 @@
 }
 
 .zhihu-hot-popover,
-.zhihu-history-popover {
+.zhihu-history-popover,
+.zhihu-author-answers-popover {
   position: absolute;
   z-index: var(--layer-popover);
   top: calc(100% + var(--size-4-2));
@@ -135,7 +136,8 @@
 }
 
 .zhihu-hot-popover > header,
-.zhihu-history-popover > header {
+.zhihu-history-popover > header,
+.zhihu-author-answers-popover > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -145,14 +147,16 @@
 }
 
 .zhihu-hot-popover > header > div,
-.zhihu-history-popover > header > div {
+.zhihu-history-popover > header > div,
+.zhihu-author-answers-popover > header > div {
   display: flex;
   min-width: 0;
   flex-direction: column;
 }
 
 .zhihu-hot-popover > header span,
-.zhihu-history-popover > header span {
+.zhihu-history-popover > header span,
+.zhihu-author-answers-popover > header span {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
@@ -163,7 +167,8 @@
 }
 
 .zhihu-hot-popover ol,
-.zhihu-history-popover ul {
+.zhihu-history-popover ul,
+.zhihu-author-answers-popover ul {
   min-height: 0;
   margin: 0;
   padding: var(--size-4-2);
@@ -173,7 +178,8 @@
 }
 
 .zhihu-hot-popover li > button,
-.zhihu-history-popover li > .zhihu-history-popover__title {
+.zhihu-history-popover li > .zhihu-history-popover__title,
+.zhihu-author-answers-popover li > button {
   appearance: none;
   display: flex;
   width: 100%;
@@ -192,7 +198,9 @@
 .zhihu-hot-popover li > button:hover,
 .zhihu-hot-popover li > button:focus-visible,
 .zhihu-history-popover li > .zhihu-history-popover__title:hover,
-.zhihu-history-popover li > .zhihu-history-popover__title:focus-visible {
+.zhihu-history-popover li > .zhihu-history-popover__title:focus-visible,
+.zhihu-author-answers-popover li > button:hover,
+.zhihu-author-answers-popover li > button:focus-visible {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
   box-shadow: none;
@@ -211,7 +219,8 @@
   color: var(--text-accent);
 }
 
-.zhihu-hot-popover__content {
+.zhihu-hot-popover__content,
+.zhihu-author-answers-popover__content {
   display: flex;
   min-width: 0;
   flex: 1;
@@ -220,7 +229,9 @@
 }
 
 .zhihu-hot-popover__content > strong,
-.zhihu-hot-popover__content > span {
+.zhihu-hot-popover__content > span,
+.zhihu-author-answers-popover__content > strong,
+.zhihu-author-answers-popover__content > span {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -229,6 +240,17 @@
 .zhihu-hot-popover__content > strong {
   -webkit-line-clamp: 2;
   line-height: 1.4;
+}
+
+.zhihu-author-answers-popover__content > strong,
+.zhihu-author-answers-popover__content > span {
+  -webkit-line-clamp: 2;
+  line-height: 1.4;
+}
+
+.zhihu-author-answers-popover__content > span {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
 }
 
 .zhihu-hot-popover__content > span {
@@ -347,6 +369,83 @@
 .zhihu-history-popover li:hover .zhihu-history-popover__remove,
 .zhihu-history-popover__remove:focus-visible {
   opacity: 1;
+}
+
+.zhihu-author-answers-anchor {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+}
+
+.zhihu-answers .zhihu-author-answers-trigger {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.zhihu-answers .zhihu-author-answers-trigger:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.zhihu-author-answers-popover {
+  right: auto;
+  left: 0;
+  width: min(460px, calc(100vw - 64px));
+  max-height: min(560px, calc(100vh - 84px));
+}
+
+.zhihu-answers .zhihu-author-answers-popover li > button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: var(--size-4-3);
+  padding: var(--size-4-3);
+  border-radius: var(--radius-s);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.zhihu-answers .zhihu-author-answers-popover li > button:hover,
+.zhihu-answers .zhihu-author-answers-popover li > button:focus-visible {
+  background: var(--background-modifier-hover);
+}
+
+.zhihu-author-answers-popover__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-6);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.zhihu-author-answers-popover__state.is-error {
+  color: var(--text-error);
+}
+
+.zhihu-author-answers-popover > footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-4) var(--size-4-3);
+  border-top: 1px solid var(--background-modifier-border);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.zhihu-author-answers-popover > footer > span[role="alert"] {
+  color: var(--text-error);
 }
 
 .zhihu-reader-toolbar__login {
@@ -505,7 +604,7 @@
 }
 
 .zhihu-answer-card {
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-l);
   background: var(--background-primary);
@@ -556,9 +655,24 @@
 
 .zhihu-answer-author__stats {
   display: flex;
+  align-items: center;
   gap: var(--size-4-3);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
+}
+
+.zhihu-answers .zhihu-answer-author__stats > button {
+  all: unset;
+  padding: 2px 4px;
+  border-radius: var(--radius-s);
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.zhihu-answers .zhihu-answer-author__stats > button:hover,
+.zhihu-answers .zhihu-answer-author__stats > button:focus-visible {
+  color: var(--text-accent-hover);
+  background: var(--background-modifier-hover);
 }
 
 .zhihu-answer-card__content {
@@ -612,6 +726,235 @@
 
 .zhihu-answer-card__save-feedback.is-error {
   color: var(--text-error);
+}
+
+.zhihu-comments-backdrop {
+  position: fixed;
+  z-index: var(--layer-modal, 1000);
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(0 0 0 / 42%);
+}
+
+.zhihu-comments-dialog {
+  display: flex;
+  width: min(580px, calc(100vw - 48px));
+  height: 100%;
+  flex-direction: column;
+  border-left: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-l);
+}
+
+.zhihu-comments-dialog > header {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: var(--size-4-3);
+  padding: var(--size-4-3) var(--size-4-4);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.zhihu-comments-dialog > header > div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.zhihu-comments-dialog > header h2 {
+  margin: 0;
+  font-size: var(--h3-size);
+}
+
+.zhihu-comments-dialog > header span {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.zhihu-comments-dialog > header > button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.25rem;
+}
+
+.zhihu-comments-dialog__body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.zhihu-comments-dialog__state {
+  display: flex;
+  min-height: 220px;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--size-4-3);
+  padding: var(--size-4-8);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.zhihu-comments-dialog__state.is-error,
+.zhihu-comments-dialog__pagination > span[role="alert"] {
+  color: var(--text-error);
+}
+
+.zhihu-comments-list,
+.zhihu-comment__preview-replies,
+.zhihu-comment__replies > ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zhihu-comments-list {
+  padding: 0 var(--size-4-4);
+}
+
+.zhihu-comment {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: var(--size-4-3);
+  padding: var(--size-4-4) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.zhihu-comment__avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--background-secondary);
+  object-fit: cover;
+}
+
+.zhihu-comment__avatar.is-fallback {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  font-weight: var(--font-semibold);
+}
+
+.zhihu-comment__main {
+  min-width: 0;
+}
+
+.zhihu-comment__author,
+.zhihu-comment__meta,
+.zhihu-comment__replies-action,
+.zhihu-comment__replies-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+}
+
+.zhihu-comment__author > span {
+  padding: 1px 5px;
+  border-radius: var(--radius-s);
+  color: var(--text-accent);
+  background: var(--background-modifier-hover);
+  font-size: var(--font-ui-smaller);
+}
+
+.zhihu-comment__author > small,
+.zhihu-comment__meta {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.zhihu-comment__content {
+  margin-top: var(--size-4-2);
+  color: var(--text-normal);
+  font-family: var(--font-text);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.zhihu-comment__content .markdown-rendered,
+.zhihu-comment__content .markdown-rendered > :first-child {
+  margin-top: 0;
+}
+
+.zhihu-comment__content .markdown-rendered > :last-child {
+  margin-bottom: 0;
+}
+
+.zhihu-comment__meta {
+  margin-top: var(--size-4-2);
+}
+
+.zhihu-comment__preview-replies,
+.zhihu-comment__replies {
+  margin-top: var(--size-4-3);
+  padding: 0 var(--size-4-3);
+  border-left: 2px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.zhihu-comment.is-reply {
+  grid-template-columns: 28px minmax(0, 1fr);
+  padding: var(--size-4-3) 0;
+}
+
+.zhihu-comment.is-reply:last-child {
+  border-bottom: 0;
+}
+
+.zhihu-comment.is-reply .zhihu-comment__avatar {
+  width: 28px;
+  height: 28px;
+  font-size: var(--font-ui-smaller);
+}
+
+.zhihu-comment__replies-action {
+  margin-top: var(--size-4-2);
+}
+
+.zhihu-answers .zhihu-comment__replies-action > button {
+  all: unset;
+  padding: 2px 0;
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.zhihu-answers .zhihu-comment__replies-action > button:hover,
+.zhihu-answers .zhihu-comment__replies-action > button:focus-visible {
+  color: var(--text-accent-hover);
+  text-decoration: underline;
+}
+
+.zhihu-comment__replies {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  padding-block: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.zhihu-comment__replies-error {
+  color: var(--text-error);
+}
+
+.zhihu-comments-dialog__pagination {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-4);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-align: center;
 }
 
 .zhihu-answer-conversion-error {
@@ -702,6 +1045,22 @@
   .zhihu-answer-card__content,
   .zhihu-answer-card__footer {
     padding: 18px;
+  }
+
+  .zhihu-comments-backdrop {
+    align-items: flex-end;
+  }
+
+  .zhihu-comments-dialog {
+    width: 100%;
+    height: min(88vh, 760px);
+    border-top: 1px solid var(--background-modifier-border);
+    border-left: 0;
+    border-radius: var(--radius-l) var(--radius-l) 0 0;
+  }
+
+  .zhihu-comments-list {
+    padding-inline: var(--size-4-3);
   }
 
   .zhihu-answer-author {

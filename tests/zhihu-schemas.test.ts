@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseAnswerResponse,
+  parseAuthorAnswersResponse,
+  parseCommentsResponse,
   parseHotListResponse,
   parseQuestionFeedsResponse,
   parseQuestionResponse,
@@ -46,6 +48,49 @@ describe("Zhihu response parsing", () => {
     expect(answer.url).toBe(
       "https://www.zhihu.com/question/123456789/answer/90071992547409931234",
     );
+    expect(answer.author.urlToken).toBe("fixture-author");
+  });
+
+  it("parses an author answer page with exact IDs and paging", () => {
+    const page = parseAuthorAnswersResponse(fixture("member-answers.json"));
+
+    expect(page.answers[0]).toEqual({
+      answerId: "90071992547409931234",
+      questionId: "1993016651038364760",
+      questionTitle: "如何建立稳定的阅读工作流？",
+      excerpt: "先阅读，再决定是否保存。",
+      voteupCount: 128,
+      createdTime: 1700000000,
+    });
+    expect(page).toMatchObject({
+      isEnd: false,
+      nextPageUrl:
+        "https://www.zhihu.com/api/v4/members/fixture-author/answers?sort_by=created&limit=10&offset=10",
+    });
+  });
+
+  it("parses root comments, visible replies and paging", () => {
+    const page = parseCommentsResponse(fixture("comments.json"));
+
+    expect(page.comments[0]).toMatchObject({
+      id: "90071992547409939999",
+      author: { name: "评论作者", urlToken: "comment-author" },
+      likeCount: 42,
+      childCommentCount: 2,
+      isAnswerAuthor: true,
+      isTop: true,
+    });
+    expect(page.comments[0]?.contentHtml).toContain("Markdown");
+    expect(page.comments[0]?.childComments[0]).toMatchObject({
+      id: "90071992547409940001",
+      author: { name: "回复者" },
+      replyToAuthor: { name: "评论作者" },
+    });
+    expect(page.comments[1]?.author).toEqual({
+      name: "未知作者",
+      headline: "",
+    });
+    expect(page.nextPageUrl).toContain("offset=10");
   });
 
   it("parses hot list items without losing an unsafe numeric question id", () => {

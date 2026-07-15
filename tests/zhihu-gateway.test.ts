@@ -50,6 +50,53 @@ describe("HttpZhihuGateway", () => {
     );
   });
 
+  it("loads an author's answer page through the authenticated gateway", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("member-answers.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport);
+
+    const page = await gateway.getAuthorAnswerPage("fixture-author");
+
+    expect(page.answers).toHaveLength(2);
+    expect(page.answers[0]?.answerId).toBe("90071992547409931234");
+    expect(transport.requests[0]?.url).toContain(
+      "/api/v4/members/fixture-author/answers?sort_by=created",
+    );
+    expect(transport.requests[0]?.headers.Referer).toBe(
+      "https://www.zhihu.com/people/fixture-author/answers",
+    );
+  });
+
+  it("loads root and child comments through validated endpoints", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("comments.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport);
+
+    const roots = await gateway.getAnswerCommentPage(
+      "90071992547409931234",
+      { order: "time" },
+    );
+    const replies = await gateway.getChildCommentPage(
+      "90071992547409939999",
+    );
+
+    expect(roots.comments).toHaveLength(2);
+    expect(replies.comments[0]?.author.name).toBe("评论作者");
+    expect(transport.requests[0]?.url).toContain(
+      "/api/v4/comment_v5/answers/90071992547409931234/root_comment?order_by=ts",
+    );
+    expect(transport.requests[0]?.headers.Referer).toBe(
+      "https://www.zhihu.com/answer/90071992547409931234",
+    );
+    expect(transport.requests[1]?.url).toContain(
+      "/api/v4/comment_v5/comment/90071992547409939999/child_comment",
+    );
+  });
+
   it("loads the daily hot list through the authenticated transport seam", async () => {
     const transport = new FixtureZhihuTransport(() => ({
       status: 200,

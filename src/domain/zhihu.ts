@@ -27,10 +27,26 @@ export interface QuestionSummary extends QuestionReference {
 
 export interface ZhihuAuthor {
   readonly id?: string;
+  readonly urlToken?: string;
   readonly name: string;
   readonly headline: string;
   readonly avatarUrl?: string;
   readonly profileUrl?: string;
+}
+
+export interface AuthorAnswerSummary {
+  readonly answerId: string;
+  readonly questionId: string;
+  readonly questionTitle: string;
+  readonly excerpt: string;
+  readonly voteupCount: number;
+  readonly createdTime?: number;
+}
+
+export interface AuthorAnswerPage {
+  readonly answers: readonly AuthorAnswerSummary[];
+  readonly isEnd: boolean;
+  readonly nextPageUrl: string | null;
 }
 
 export interface AnswerDocument {
@@ -51,6 +67,27 @@ export interface AnswerPage {
   readonly isEnd: boolean;
   readonly nextPageUrl: string | null;
   readonly previousPageUrl: string | null;
+}
+
+export type CommentOrder = "score" | "time";
+
+export interface ZhihuComment {
+  readonly id: string;
+  readonly author: ZhihuAuthor;
+  readonly replyToAuthor?: ZhihuAuthor;
+  readonly contentHtml: string;
+  readonly createdTime?: number;
+  readonly likeCount: number;
+  readonly childCommentCount: number;
+  readonly childComments: readonly ZhihuComment[];
+  readonly isAnswerAuthor: boolean;
+  readonly isTop: boolean;
+}
+
+export interface CommentPage {
+  readonly comments: readonly ZhihuComment[];
+  readonly isEnd: boolean;
+  readonly nextPageUrl: string | null;
 }
 
 export interface ZhihuHotListItem {

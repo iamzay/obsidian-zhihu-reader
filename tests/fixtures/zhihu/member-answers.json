@@ -1,0 +1,29 @@
+{
+  "data": [
+    {
+      "id": 9007199254740992,
+      "url": "https://www.zhihu.com/api/v4/answers/90071992547409931234",
+      "excerpt": "先阅读，再决定是否保存。",
+      "voteup_count": 128,
+      "created_time": 1700000000,
+      "question": {
+        "id": 1993016651038364700,
+        "url": "https://api.zhihu.com/questions/1993016651038364760",
+        "title": "如何建立稳定的阅读工作流？"
+      }
+    },
+    {
+      "id": "22334455",
+      "excerpt": "把阅读和知识沉淀分成两个阶段。",
+      "voteup_count": 32,
+      "question": {
+        "id": "123456789",
+        "title": "怎样减少无效的信息收藏？"
+      }
+    }
+  ],
+  "paging": {
+    "is_end": false,
+    "next": "https://www.zhihu.com/api/v4/members/fixture-author/answers?sort_by=created&limit=10&offset=10"
+  }
+}

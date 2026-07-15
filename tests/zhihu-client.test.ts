@@ -1,8 +1,63 @@
 import { describe, expect, it } from "vitest";
 
-import { buildHotListUrl, buildQuestionFeedsUrl } from "@/zhihu/urls";
+import {
+  buildAnswerCommentsUrl,
+  buildAuthorAnswersUrl,
+  buildChildCommentsUrl,
+  buildHotListUrl,
+  buildQuestionFeedsUrl,
+} from "@/zhihu/urls";
 
 describe("buildQuestionFeedsUrl", () => {
+  it("builds and validates answer comment pagination URLs", () => {
+    expect(buildAnswerCommentsUrl("123", { limit: 20, order: "time" })).toBe(
+      "https://www.zhihu.com/api/v4/comment_v5/answers/123/root_comment?order_by=ts&limit=20",
+    );
+    const next =
+      "https://www.zhihu.com/api/v4/comment_v5/answers/123/root_comment?order_by=score&limit=10&offset=10";
+    expect(buildAnswerCommentsUrl("123", { pageUrl: next })).toBe(next);
+    expect(() =>
+      buildAnswerCommentsUrl("123", {
+        pageUrl:
+          "https://www.zhihu.com/api/v4/comment_v5/answers/456/root_comment?offset=10",
+      }),
+    ).toThrow("Invalid Zhihu comments page URL.");
+  });
+
+  it("builds and validates child comment pagination URLs", () => {
+    expect(buildChildCommentsUrl("789")).toBe(
+      "https://www.zhihu.com/api/v4/comment_v5/comment/789/child_comment?limit=10",
+    );
+    expect(() => buildChildCommentsUrl("not-an-id")).toThrow(
+      "Comment ID must contain digits only.",
+    );
+    expect(() => buildChildCommentsUrl("789", { limit: 21 })).toThrow(
+      "Comment limit must be an integer between 1 and 20.",
+    );
+  });
+
+  it("builds and validates the paginated author answers endpoint", () => {
+    const initial = new URL(buildAuthorAnswersUrl("fixture-author"));
+    expect(initial.pathname).toBe(
+      "/api/v4/members/fixture-author/answers",
+    );
+    expect(initial.searchParams.get("sort_by")).toBe("created");
+    expect(initial.searchParams.get("limit")).toBe("10");
+    expect(initial.searchParams.get("include")).toContain("data[*].excerpt");
+
+    const next =
+      "https://www.zhihu.com/api/v4/members/fixture-author/answers?offset=10&limit=10";
+    expect(buildAuthorAnswersUrl("fixture-author", { pageUrl: next })).toContain(
+      `${next}&include=`,
+    );
+    expect(() =>
+      buildAuthorAnswersUrl("fixture-author", {
+        pageUrl:
+          "https://www.zhihu.com/api/v4/members/another-author/answers?offset=10",
+      }),
+    ).toThrow("Invalid Zhihu author answers page URL.");
+  });
+
   it("builds the mobile daily hot list endpoint used by the reference client", () => {
     expect(buildHotListUrl()).toBe(
       "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50&mobile=true",
