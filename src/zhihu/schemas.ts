@@ -68,7 +68,7 @@ const zhihuAnswerSchema = z
     id: zhihuIdSchema,
     url: optionalUrlSchema,
     author: zhihuAuthorSchema.nullish(),
-    content: z.string().catch(""),
+    content: z.string(),
     excerpt: z.string().catch(""),
     voteup_count: nonNegativeIntegerSchema,
     comment_count: nonNegativeIntegerSchema,

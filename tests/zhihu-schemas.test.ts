@@ -97,6 +97,18 @@ describe("Zhihu response parsing", () => {
     }
   });
 
+  it("rejects an answer when its required body is missing", () => {
+    expect(() =>
+      parseAnswerResponse(
+        JSON.stringify({
+          type: "answer",
+          id: "123",
+          question: { id: "456", title: "Question" },
+        }),
+      ),
+    ).toThrowError(ZhihuResponseValidationError);
+  });
+
   it("preserves a Zhihu error code and message", () => {
     expect(() => parseQuestionResponse(fixture("error.json"))).toThrowError(
       new ZhihuApiResponseError("10002", "内容不存在或已被删除"),
