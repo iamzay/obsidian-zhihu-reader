@@ -21,8 +21,11 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
       });
     }
 
-    containerEl.createEl("h3", { text: "阅读" });
     const settings = this.zhihuPlugin.getSettings();
+
+    this.renderAuthSettings();
+
+    containerEl.createEl("h3", { text: "阅读" });
 
     new Setting(containerEl)
       .setName("每批回答数")
@@ -89,5 +92,84 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
             }
           }),
       );
+  }
+
+  private renderAuthSettings(): void {
+    const { containerEl } = this;
+    const auth = this.zhihuPlugin.getAuthSnapshot();
+    containerEl.createEl("h3", { text: "知乎登录" });
+
+    const authSection = containerEl.createDiv({
+      cls: "zhihu-settings-auth",
+      attr: { "aria-live": "polite" },
+    });
+    authSection.createEl("p", {
+      text: auth.message ?? authStatusText(auth.phase),
+    });
+
+    if (auth.qrDataUrl !== null) {
+      authSection.createEl("img", {
+        cls: "zhihu-settings-auth__qr",
+        attr: {
+          src: auth.qrDataUrl,
+          alt: "知乎登录二维码",
+        },
+      });
+    }
+
+    if (auth.phase === "authenticated") {
+      new Setting(authSection)
+        .setName(auth.profile?.name ?? "已登录知乎")
+        .setDesc("登录 Cookie 仅保存在插件私有数据中。")
+        .addButton((button) =>
+          button.setButtonText("退出登录").onClick(() => {
+            void this.zhihuPlugin.logout();
+          }),
+        );
+      return;
+    }
+
+    if (
+      auth.phase === "creating-qr" ||
+      auth.phase === "waiting-scan" ||
+      auth.phase === "waiting-confirm" ||
+      auth.phase === "verifying"
+    ) {
+      new Setting(authSection).addButton((button) =>
+        button.setButtonText("取消").onClick(() => {
+          this.zhihuPlugin.cancelQrLogin();
+        }),
+      );
+      return;
+    }
+
+    if (auth.phase === "risk-control" && auth.riskControlUrl !== null) {
+      new Setting(authSection).addButton((button) =>
+        button.setButtonText("在浏览器完成验证").onClick(() => {
+          window.open(auth.riskControlUrl ?? "", "_blank", "noopener,noreferrer");
+        }),
+      );
+    }
+
+    new Setting(authSection).addButton((button) =>
+      button.setButtonText("生成登录二维码").setCta().onClick(() => {
+        void this.zhihuPlugin.startQrLogin();
+      }),
+    );
+  }
+}
+
+function authStatusText(phase: string): string {
+  switch (phase) {
+    case "expired":
+      return "登录已过期，当前使用匿名阅读。";
+    case "cancelled":
+      return "已取消登录。";
+    case "risk-control":
+      return "知乎要求先完成网络环境验证。";
+    case "error":
+      return "登录发生错误，匿名阅读仍可使用。";
+    default:
+      return "当前未登录；公开内容仍可匿名阅读。";
   }
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { PersistedZhihuAuth } from "@/auth/types";
 import {
   DEFAULT_PLUGIN_DATA,
   DEFAULT_PLUGIN_SETTINGS,
@@ -7,6 +8,7 @@ import {
   PluginDataSchema,
   type PluginSettings,
   PluginSettingsSchema,
+  PersistedZhihuAuthSchema,
 } from "@/settings/data";
 
 export interface PluginDataStorage {
@@ -45,10 +47,25 @@ export class PluginDataRepository {
     await this.storage.save(PluginDataSchema.parse(data));
   }
 
-  async saveSettings(settings: PluginSettings): Promise<PluginData> {
+  async saveSettings(
+    current: PluginData,
+    settings: PluginSettings,
+  ): Promise<PluginData> {
     const data: PluginData = {
-      version: 1,
+      ...current,
       settings: PluginSettingsSchema.parse(settings),
+    };
+    await this.save(data);
+    return data;
+  }
+
+  async saveAuth(
+    current: PluginData,
+    auth: PersistedZhihuAuth,
+  ): Promise<PluginData> {
+    const data: PluginData = {
+      ...current,
+      auth: PersistedZhihuAuthSchema.parse(auth),
     };
     await this.save(data);
     return data;
@@ -131,9 +148,18 @@ function recoverPluginData(raw: unknown): PluginDataLoadResult {
       issues,
     ),
   };
+  const authResult = PersistedZhihuAuthSchema.safeParse(
+    recordResult.data.auth,
+  );
+  if (recordResult.data.auth !== undefined && !authResult.success) {
+    issues.push("auth");
+  }
+  const auth = authResult.success
+    ? authResult.data
+    : structuredClone(DEFAULT_PLUGIN_DATA.auth);
 
   return {
-    data: { version: 1, settings },
+    data: { version: 1, settings, auth },
     diagnostic:
       issues.length === 0
         ? null

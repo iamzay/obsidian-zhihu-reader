@@ -201,6 +201,27 @@
   background: var(--background-modifier-hover);
 }
 
+.zhihu-question-summary__detail {
+  margin-top: var(--size-4-5);
+  padding-top: var(--size-4-4);
+  border-top: 1px solid var(--background-modifier-border);
+  font-family: var(--font-text);
+}
+
+.zhihu-question-summary__toggle {
+  margin-top: var(--size-4-4);
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  color: var(--text-accent);
+  background: transparent;
+}
+
+.zhihu-question-summary__toggle:hover {
+  color: var(--text-accent-hover);
+  background: transparent;
+}
+
 .zhihu-answer-card {
   overflow: hidden;
   border: 1px solid var(--background-modifier-border);
@@ -306,10 +327,44 @@
   padding: var(--size-4-5) 0;
 }
 
+.zhihu-answer-navigation-wrap {
+  padding-bottom: var(--size-4-5);
+}
+
+.zhihu-answer-navigation select {
+  max-width: 8.5rem;
+}
+
 .zhihu-answer-navigation > span {
   display: flex;
   flex-direction: column;
   text-align: center;
+}
+
+.zhihu-answer-navigation__anchor,
+.zhihu-answer-navigation__error,
+.zhihu-answer-navigation__end {
+  margin: 0;
+  text-align: center;
+  font-size: var(--font-ui-small);
+}
+
+.zhihu-answer-navigation__anchor,
+.zhihu-answer-navigation__error {
+  color: var(--text-muted);
+}
+
+.zhihu-answer-navigation__anchor button,
+.zhihu-answer-navigation__error button {
+  margin-left: var(--size-4-2);
+}
+
+.zhihu-answer-navigation__error {
+  color: var(--text-error);
+}
+
+.zhihu-answer-navigation__end {
+  color: var(--text-faint);
 }
 
 .zhihu-url-modal__help {
@@ -342,6 +397,27 @@
   border-radius: var(--radius-m);
   color: var(--text-warning);
   background: var(--background-modifier-message);
+}
+
+.zhihu-settings-auth {
+  margin-bottom: var(--size-4-6);
+  padding: var(--size-4-4);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l);
+  background: var(--background-secondary);
+}
+
+.zhihu-settings-auth > p {
+  margin-top: 0;
+  color: var(--text-muted);
+}
+
+.zhihu-settings-auth__qr {
+  display: block;
+  width: min(280px, 100%);
+  margin: var(--size-4-4) auto;
+  border-radius: var(--radius-m);
+  background: white;
 }
 
 @media (max-width: 600px) {
@@ -386,6 +462,15 @@
   .zhihu-answer-card__footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .zhihu-answer-navigation {
+    flex-wrap: wrap;
+  }
+
+  .zhihu-answer-navigation > span {
+    order: -1;
+    width: 100%;
   }
 }
 

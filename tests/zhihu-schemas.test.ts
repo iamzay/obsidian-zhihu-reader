@@ -37,7 +37,7 @@ describe("Zhihu response parsing", () => {
     const answer = parseAnswerResponse(fixture("answer.json"));
 
     expect(answer.id).toBe("90071992547409931234");
-    expect(answer.question).toEqual({
+    expect(answer.question).toMatchObject({
       id: "123456789",
       title: "如何在 Obsidian 中建立阅读工作流？",
       url: "https://www.zhihu.com/question/123456789",

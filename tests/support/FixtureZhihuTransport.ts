@@ -4,17 +4,28 @@ import type {
   ZhihuTransportResponse,
 } from "@/zhihu/transport";
 
+export interface FixtureZhihuTransportResponse {
+  readonly status: number;
+  readonly text: string;
+  readonly headers?: Readonly<Record<string, string>>;
+}
+
 export class FixtureZhihuTransport implements ZhihuTransport {
   readonly requests: ZhihuTransportRequest[] = [];
 
   constructor(
     private readonly respond: (
       request: ZhihuTransportRequest,
-    ) => ZhihuTransportResponse | Promise<ZhihuTransportResponse>,
+    ) =>
+      | FixtureZhihuTransportResponse
+      | Promise<FixtureZhihuTransportResponse>,
   ) {}
 
-  async get(request: ZhihuTransportRequest): Promise<ZhihuTransportResponse> {
+  async request(
+    request: ZhihuTransportRequest,
+  ): Promise<ZhihuTransportResponse> {
     this.requests.push(request);
-    return await this.respond(request);
+    const response = await this.respond(request);
+    return { ...response, headers: response.headers ?? {} };
   }
 }

@@ -43,7 +43,7 @@ export interface AnswerDocument {
   readonly commentCount: number;
   readonly createdTime?: number;
   readonly updatedTime?: number;
-  readonly question: QuestionReference;
+  readonly question: QuestionSummary;
 }
 
 export interface AnswerPage {
@@ -54,6 +54,7 @@ export interface AnswerPage {
 }
 
 export type ReaderPhase = "idle" | "loading" | "ready" | "error";
+export type AnswerOrder = "default" | "updated";
 
 /** Read-only state exposed by ReaderSession to the React view. */
 export interface ReaderSnapshot {
@@ -66,4 +67,6 @@ export interface ReaderSnapshot {
   readonly isLoadingNextPage: boolean;
   readonly isEnd: boolean;
   readonly errorMessage: string | null;
+  readonly navigationError: string | null;
+  readonly order: AnswerOrder;
 }

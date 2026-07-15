@@ -74,7 +74,7 @@ const zhihuAnswerSchema = z
     comment_count: nonNegativeIntegerSchema,
     created_time: optionalTimestampSchema,
     updated_time: optionalTimestampSchema,
-    question: zhihuQuestionReferenceSchema,
+    question: zhihuQuestionSchema,
   })
   .passthrough();
 
@@ -217,7 +217,7 @@ function toAnswerDocument(
     ...(answer.updated_time === undefined
       ? {}
       : { updatedTime: answer.updated_time }),
-    question: toQuestionReference(answer.question),
+    question: toQuestionSummary(answer.question),
   };
 }
 

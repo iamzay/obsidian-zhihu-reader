@@ -1,21 +1,28 @@
-import type { AnswerDocument, AnswerPage } from "@/domain/zhihu";
+import type {
+  AnswerDocument,
+  AnswerPage,
+  QuestionSummary,
+} from "@/domain/zhihu";
 import {
   parseAnswerResponse,
+  parseQuestionResponse,
   parseQuestionFeedsResponse,
   ZhihuApiResponseError,
   ZhihuResponseValidationError,
 } from "@/zhihu/schemas";
 import type { ZhihuTransport } from "@/zhihu/transport";
 import {
+  authenticatedFetchHeaders,
+  ZHIHU_DESKTOP_USER_AGENT,
+} from "@/zhihu/fetchSignature";
+import {
   buildAnswerUrl,
   buildQuestionFeedsUrl,
+  buildQuestionUrl,
   type FetchQuestionAnswersOptions,
 } from "@/zhihu/urls";
 
 const ZHIHU_WEB_ORIGIN = "https://www.zhihu.com";
-const DEFAULT_USER_AGENT =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
-  "(KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
 export type ZhihuGatewayErrorKind =
   | "network"
@@ -36,6 +43,7 @@ export class ZhihuGatewayError extends Error {
 }
 
 export interface ZhihuGateway {
+  getQuestion(questionId: string): Promise<QuestionSummary>;
   getAnswer(answerId: string): Promise<AnswerDocument>;
   getAnswerPage(
     questionId: string,
@@ -44,20 +52,32 @@ export interface ZhihuGateway {
 }
 
 export interface HttpZhihuGatewayOptions {
-  readonly cookie?: string;
+  readonly getCookieHeader?: () => string | undefined;
   readonly userAgent?: string;
 }
 
 export class HttpZhihuGateway implements ZhihuGateway {
-  private readonly cookie?: string;
+  private readonly getCookieHeader: () => string | undefined;
   private readonly userAgent: string;
 
   constructor(
     private readonly transport: ZhihuTransport,
     options: HttpZhihuGatewayOptions = {},
   ) {
-    this.cookie = options.cookie?.trim() || undefined;
-    this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
+    this.getCookieHeader = options.getCookieHeader ?? (() => undefined);
+    this.userAgent = options.userAgent ?? ZHIHU_DESKTOP_USER_AGENT;
+  }
+
+  async getQuestion(questionId: string): Promise<QuestionSummary> {
+    const text = await this.request(
+      buildQuestionUrl(questionId),
+      `${ZHIHU_WEB_ORIGIN}/question/${questionId}`,
+    );
+    try {
+      return parseQuestionResponse(text);
+    } catch (error: unknown) {
+      throw responseError(error);
+    }
   }
 
   async getAnswer(answerId: string): Promise<AnswerDocument> {
@@ -87,13 +107,17 @@ export class HttpZhihuGateway implements ZhihuGateway {
   private async request(url: string, referer: string): Promise<string> {
     let response;
     try {
-      response = await this.transport.get({
+      const cookie = this.getCookieHeader();
+      response = await this.transport.request({
         url,
         headers: {
           Accept: "application/json",
           Referer: referer,
           "User-Agent": this.userAgent,
-          ...(this.cookie === undefined ? {} : { Cookie: this.cookie }),
+          ...(cookie === undefined ? {} : { Cookie: cookie }),
+          ...(cookie === undefined
+            ? {}
+            : authenticatedFetchHeaders(url, cookie)),
         },
       });
     } catch (error: unknown) {

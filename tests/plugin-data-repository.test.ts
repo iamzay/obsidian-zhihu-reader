@@ -66,7 +66,7 @@ describe("PluginDataRepository", () => {
     const storage = new MemoryPluginDataStorage();
     const repository = new PluginDataRepository(storage);
 
-    await repository.saveSettings({
+    await repository.saveSettings(DEFAULT_PLUGIN_DATA, {
       ...DEFAULT_PLUGIN_DATA.settings,
       feedLimit: 8,
       saveFolder: "Clippings/Zhihu",
@@ -80,13 +80,34 @@ describe("PluginDataRepository", () => {
     });
   });
 
+  it("preserves authentication data when settings are saved", async () => {
+    const storage = new MemoryPluginDataStorage();
+    const repository = new PluginDataRepository(storage);
+    const current = {
+      ...DEFAULT_PLUGIN_DATA,
+      auth: {
+        cookies: { session_cookie: "private-value" },
+        profile: null,
+        verifiedAt: 100,
+      },
+    };
+
+    const saved = await repository.saveSettings(current, {
+      ...current.settings,
+      feedLimit: 10,
+    });
+
+    expect(saved.auth).toEqual(current.auth);
+    expect((await repository.load()).data.auth).toEqual(current.auth);
+  });
+
   it("rejects an invalid feed limit when saving", async () => {
     const repository = new PluginDataRepository(
       new MemoryPluginDataStorage(),
     );
 
     await expect(
-      repository.saveSettings({
+      repository.saveSettings(DEFAULT_PLUGIN_DATA, {
         ...DEFAULT_PLUGIN_DATA.settings,
         feedLimit: 0,
       }),

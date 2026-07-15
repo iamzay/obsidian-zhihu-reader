@@ -1,10 +1,15 @@
 import { Notice, Plugin } from "obsidian";
 
+import { renderQrCodeDataUrl } from "@/auth/QrCodeRenderer";
+import { ZhihuAuthSession } from "@/auth/ZhihuAuthSession";
+import type { PersistedZhihuAuth, ZhihuAuthSnapshot } from "@/auth/types";
 import type { ZhihuTarget } from "@/domain/zhihu";
+import { PluginDataRepository } from "@/settings/PluginDataRepository";
 import {
-  PluginDataRepository,
-} from "@/settings/PluginDataRepository";
-import { type PluginData, type PluginSettings, PluginSettingsSchema } from "@/settings/data";
+  type PluginData,
+  type PluginSettings,
+  PluginSettingsSchema,
+} from "@/settings/data";
 import { ObsidianPluginDataStorage } from "@/settings/ObsidianPluginDataStorage";
 import { ZhihuAnswersSettingTab } from "@/settings/ZhihuAnswersSettingTab";
 import { HttpZhihuGateway } from "@/zhihu/gateway";
@@ -20,6 +25,8 @@ export default class ZhihuAnswersPlugin extends Plugin {
   private readonly targetParser = new ZhihuTargetParser();
   private dataRepository!: PluginDataRepository;
   private pluginData!: PluginData;
+  private authSession!: ZhihuAuthSession;
+  private settingTab!: ZhihuAnswersSettingTab;
   private dataDiagnostic: string | null = null;
 
   override async onload(): Promise<void> {
@@ -34,19 +41,52 @@ export default class ZhihuAnswersPlugin extends Plugin {
       new Notice("Zhihu Answers 的部分配置无效，已恢复默认值。");
     }
 
-    const gateway = new HttpZhihuGateway(new ObsidianZhihuTransport());
+    const transport = new ObsidianZhihuTransport();
+    this.authSession = new ZhihuAuthSession(
+      transport,
+      {
+        save: async (auth) => {
+          await this.persistAuth(auth);
+        },
+      },
+      renderQrCodeDataUrl,
+    );
+    const gateway = new HttpZhihuGateway(transport, {
+      getCookieHeader: () => this.authSession.getCookieHeader(),
+    });
+
     this.registerView(
       VIEW_TYPE_ZHIHU_ANSWERS,
       (leaf) =>
-        new ZhihuAnswersView(leaf, gateway, {
-          openUrlModal: () => this.openUrlModal(),
-          openFromClipboard: () => {
-            void this.openFromClipboard();
+        new ZhihuAnswersView(
+          leaf,
+          gateway,
+          () => ({
+            feedLimit: this.pluginData.settings.feedLimit,
+            order: this.pluginData.settings.answerOrder,
+          }),
+          {
+            openUrlModal: () => this.openUrlModal(),
+            openFromClipboard: () => {
+              void this.openFromClipboard();
+            },
           },
-        }),
+          this.authSession.snapshot(),
+        ),
     );
 
-    this.addSettingTab(new ZhihuAnswersSettingTab(this.app, this));
+    this.settingTab = new ZhihuAnswersSettingTab(this.app, this);
+    this.addSettingTab(this.settingTab);
+    this.authSession.subscribe((snapshot) => {
+      this.settingTab.display();
+      for (const leaf of this.app.workspace.getLeavesOfType(
+        VIEW_TYPE_ZHIHU_ANSWERS,
+      )) {
+        if (leaf.view instanceof ZhihuAnswersView) {
+          leaf.view.setAuthSnapshot(snapshot);
+        }
+      }
+    });
 
     this.addRibbonIcon("book-open-text", "打开 Zhihu Answers", () => {
       void this.activateView();
@@ -65,9 +105,12 @@ export default class ZhihuAnswersPlugin extends Plugin {
         void this.openFromClipboard();
       },
     });
+
+    void this.authSession.verifyStoredSession(this.pluginData.auth);
   }
 
   override onunload(): void {
+    this.authSession.dispose();
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_ZHIHU_ANSWERS);
   }
 
@@ -79,13 +122,36 @@ export default class ZhihuAnswersPlugin extends Plugin {
     return this.dataDiagnostic;
   }
 
+  getAuthSnapshot(): ZhihuAuthSnapshot {
+    return this.authSession.snapshot();
+  }
+
+  startQrLogin(): Promise<void> {
+    return this.authSession.startQrLogin();
+  }
+
+  cancelQrLogin(): void {
+    this.authSession.cancel();
+  }
+
+  logout(): Promise<void> {
+    return this.authSession.logout();
+  }
+
   async updateSettings(patch: Partial<PluginSettings>): Promise<void> {
     const settings = PluginSettingsSchema.parse({
       ...this.pluginData.settings,
       ...patch,
     });
-    this.pluginData = await this.dataRepository.saveSettings(settings);
+    this.pluginData = await this.dataRepository.saveSettings(
+      this.pluginData,
+      settings,
+    );
     this.dataDiagnostic = null;
+  }
+
+  private async persistAuth(auth: PersistedZhihuAuth): Promise<void> {
+    this.pluginData = await this.dataRepository.saveAuth(this.pluginData, auth);
   }
 
   private openUrlModal(initialValue = ""): void {

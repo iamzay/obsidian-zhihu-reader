@@ -13,6 +13,26 @@ function fixture(name: string): string {
 }
 
 describe("HttpZhihuGateway", () => {
+  it("loads the complete question summary", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("question.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport);
+
+    const question = await gateway.getQuestion("123456789");
+
+    expect(question).toMatchObject({
+      id: "123456789",
+      title: "如何在 Obsidian 中建立阅读工作流？",
+      answerCount: 18,
+      followerCount: 204,
+    });
+    expect(transport.requests[0]?.url).toContain(
+      "/api/v4/questions/123456789?include=",
+    );
+  });
+
   it("loads a direct answer through the transport seam", async () => {
     const transport = new FixtureZhihuTransport(() => ({
       status: 200,
@@ -67,5 +87,68 @@ describe("HttpZhihuGateway", () => {
     await expect(gateway.getAnswer("123")).rejects.toMatchObject({
       kind: "network",
     });
+  });
+
+  it("reads the current authenticated cookie for every request", async () => {
+    const auth = { cookie: undefined as string | undefined };
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("answer.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport, {
+      getCookieHeader: () => auth.cookie,
+    });
+
+    await gateway.getAnswer("123");
+    auth.cookie = "session_cookie=fixture";
+    await gateway.getAnswer("124");
+
+    expect(transport.requests[0]?.headers.Cookie).toBeUndefined();
+    expect(transport.requests[1]?.headers.Cookie).toBe(
+      "session_cookie=fixture",
+    );
+  });
+
+  it("signs authenticated requests when the session contains d_c0", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("answer.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport, {
+      getCookieHeader: () =>
+        'z_c0=fixture-session; d_c0="fixture-device-token"',
+    });
+
+    await gateway.getAnswer("123");
+
+    expect(transport.requests[0]?.headers).toMatchObject({
+      "x-zse-93": "101_3_3.0",
+      "x-requested-with": "fetch",
+    });
+    expect(transport.requests[0]?.headers["x-zse-96"]).toMatch(/^2\.0_/u);
+    expect(transport.requests[0]?.headers["User-Agent"]).toContain(
+      "Chrome/145.0.0.0",
+    );
+  });
+
+  it("follows the validated paging.next URL", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("question-feeds.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport);
+    const next =
+      "https://www.zhihu.com/api/v4/questions/123456789/feeds?limit=6&offset=6";
+
+    await gateway.getAnswerPage("123456789", { pageUrl: next });
+
+    const requestedUrl = new URL(transport.requests[0]?.url ?? "");
+    expect(requestedUrl.origin + requestedUrl.pathname).toBe(
+      "https://www.zhihu.com/api/v4/questions/123456789/feeds",
+    );
+    expect(requestedUrl.searchParams.get("offset")).toBe("6");
+    expect(requestedUrl.searchParams.get("include")).toContain(
+      "data[*].content",
+    );
   });
 });
