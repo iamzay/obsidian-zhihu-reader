@@ -271,6 +271,7 @@ function answer(contentHtml = "<p>回答正文</p>"): AnswerDocument {
     contentHtml,
     excerpt: "回答正文",
     voteupCount: 42,
+    isVoted: false,
     commentCount: 3,
     createdTime: 1_700_000_000,
     question: {

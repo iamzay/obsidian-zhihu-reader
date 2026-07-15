@@ -152,6 +152,7 @@ function searchGateway(
     },
     getQuestion: () => Promise.reject(new Error("Not used")),
     getAnswer: () => Promise.reject(new Error("Not used")),
+    setAnswerVote: () => Promise.reject(new Error("Not used")),
     getAnswerCommentPage: () => Promise.reject(new Error("Not used")),
     getChildCommentPage: () => Promise.reject(new Error("Not used")),
     getAuthorAnswerPage: () => Promise.reject(new Error("Not used")),

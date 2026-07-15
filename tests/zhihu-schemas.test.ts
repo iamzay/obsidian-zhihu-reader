@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseAnswerResponse,
+  parseAnswerVoteResponse,
   parseAuthorAnswersResponse,
   parseCommentsResponse,
   parseHotListResponse,
@@ -50,6 +51,18 @@ describe("Zhihu response parsing", () => {
       "https://www.zhihu.com/question/123456789/answer/90071992547409931234",
     );
     expect(answer.author.urlToken).toBe("fixture-author");
+    expect(answer).toMatchObject({
+      voteupCount: 128,
+      commentCount: 9,
+      isVoted: true,
+    });
+  });
+
+  it("parses the authoritative vote count after a vote", () => {
+    expect(parseAnswerVoteResponse('{"voteup_count":129}', true)).toEqual({
+      isVoted: true,
+      voteupCount: 129,
+    });
   });
 
   it("parses an author answer page with exact IDs and paging", () => {
@@ -198,6 +211,7 @@ describe("Zhihu response parsing", () => {
     expect(answer).toMatchObject({
       excerpt: "",
       voteupCount: 0,
+      isVoted: false,
       commentCount: 0,
       author: { name: "未知作者", headline: "" },
     });

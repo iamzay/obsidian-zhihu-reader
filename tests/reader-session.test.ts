@@ -45,6 +45,10 @@ class FakeGateway implements ZhihuGateway {
     return Promise.resolve(this.anchor);
   }
 
+  setAnswerVote(): Promise<never> {
+    return Promise.reject(new Error("Not used"));
+  }
+
   getAnswerCommentPage(): Promise<never> {
     return Promise.reject(new Error("Not used"));
   }
@@ -294,6 +298,7 @@ function answer(
     contentHtml: `<p>回答 ${id}</p>`,
     excerpt: `回答 ${id}`,
     voteupCount: Number(id),
+    isVoted: false,
     commentCount: 0,
     question: answerQuestion,
   };

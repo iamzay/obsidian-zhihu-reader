@@ -38,6 +38,10 @@ import {
 } from "@/reader/ReaderSession";
 import type { ZhihuGateway } from "@/zhihu/gateway";
 import {
+  AnswerVoteController,
+  type AnswerVoteState,
+} from "@/vote/AnswerVoteController";
+import {
   ReaderScreen,
   type AnswerSaveState,
   type PreparedAnswer,
@@ -66,11 +70,13 @@ export class ZhihuAnswersView extends ItemView {
   private readonly authorAnswerList: AuthorAnswerList;
   private readonly answerCommentList: AnswerCommentList;
   private readonly search: ZhihuAnswerSearch;
+  private readonly answerVote: AnswerVoteController;
   private unsubscribeSession: (() => void) | null = null;
   private unsubscribeDailyHotList: (() => void) | null = null;
   private unsubscribeAuthorAnswerList: (() => void) | null = null;
   private unsubscribeAnswerCommentList: (() => void) | null = null;
   private unsubscribeSearch: (() => void) | null = null;
+  private unsubscribeAnswerVote: (() => void) | null = null;
   private snapshot: ReaderSnapshot;
   private dailyHotListSnapshot: DailyHotListSnapshot;
   private authorAnswerListSnapshot: AuthorAnswerListSnapshot;
@@ -103,6 +109,7 @@ export class ZhihuAnswersView extends ItemView {
     this.authorAnswerList = new AuthorAnswerList(gateway);
     this.answerCommentList = new AnswerCommentList(gateway);
     this.search = new ZhihuAnswerSearch(gateway);
+    this.answerVote = new AnswerVoteController(gateway);
     this.snapshot = this.session.snapshot();
     this.dailyHotListSnapshot = this.dailyHotList.snapshot();
     this.authorAnswerListSnapshot = this.authorAnswerList.snapshot();
@@ -172,6 +179,7 @@ export class ZhihuAnswersView extends ItemView {
       this.searchSnapshot = snapshot;
       this.render();
     });
+    this.unsubscribeAnswerVote = this.answerVote.subscribe(() => this.render());
     this.render();
     return Promise.resolve();
   }
@@ -187,11 +195,14 @@ export class ZhihuAnswersView extends ItemView {
     this.unsubscribeAnswerCommentList = null;
     this.unsubscribeSearch?.();
     this.unsubscribeSearch = null;
+    this.unsubscribeAnswerVote?.();
+    this.unsubscribeAnswerVote = null;
     this.session.dispose();
     this.dailyHotList.dispose();
     this.authorAnswerList.dispose();
     this.answerCommentList.dispose();
     this.search.dispose();
+    this.answerVote.dispose();
     this.root?.unmount();
     this.root = null;
     return Promise.resolve();
@@ -324,6 +335,9 @@ export class ZhihuAnswersView extends ItemView {
       },
       retryNavigation: () => {
         void this.session.retryNavigation();
+      },
+      toggleAnswerVote: (answer: AnswerDocument) => {
+        void this.answerVote.toggle(answer);
       },
       toggleHistory: () => {
         this.isHistoryOpen = !this.isHistoryOpen;
@@ -469,6 +483,7 @@ export class ZhihuAnswersView extends ItemView {
           isSearchOpen={this.isSearchOpen}
           isDailyHotListOpen={this.isDailyHotListOpen}
           saveState={this.currentSaveState()}
+          voteState={this.currentVoteState()}
           actions={this.readerActions()}
         />
       </StrictMode>,
@@ -495,5 +510,10 @@ export class ZhihuAnswersView extends ItemView {
     return error === undefined
       ? { status: "idle" }
       : { status: "error", message: error };
+  }
+
+  private currentVoteState(): AnswerVoteState | null {
+    const answer = this.snapshot.answers[this.snapshot.currentIndex];
+    return answer === undefined ? null : this.answerVote.snapshot(answer);
   }
 }

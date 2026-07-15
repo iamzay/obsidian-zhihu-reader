@@ -69,9 +69,17 @@ GET https://www.zhihu.com/api/v4/search_v3?q={query}&t=general&vertical=answer&l
 
 知乎搜索可能要求有效登录；插件会复用已保存的登录 Cookie 和签名请求，不保存搜索关键词历史。
 
+回答点赞使用登录态写接口，取消赞同复用同一接口：
+
+```text
+POST https://www.zhihu.com/api/v4/answers/{answerId}/voters
+{"type":"up"} / {"type":"neutral"}
+```
+
 - 返回体主要由 `data` 和 `paging` 组成，回答数据位于 `data[*].target`。
 - 请求统一携带浏览器 User-Agent；需要登录态时额外携带知乎 Cookie。
-- 登录态请求会复用插件保存的知乎 Cookie，并根据 `d_c0` 生成 `x-zse-93` / `x-zse-96` 请求头；本项目不实现知乎写操作。
+- 登录态请求会复用插件保存的知乎 Cookie，并根据 `d_c0` 生成 `x-zse-93` / `x-zse-96` 请求头；POST 点赞签名同时绑定原始 JSON 请求体。
+- 目前仅实现回答赞同/取消赞同，不实现评论点赞、收藏、关注、回复或内容发布。
 - Obsidian 端通过 `requestUrl` 请求，以避开普通浏览器 `fetch` 的 CORS 限制；响应在进入业务层前用 Zod 校验。
 - 回答 HTML 通过 Turndown 转为 Markdown，转换器位于 `src/markdown/toMarkdown.ts`。
 
@@ -85,6 +93,7 @@ src/
   author/                    # 作者回答按需加载与分页状态
   comments/                  # 回答评论、子回复与排序分页状态
   search/                    # 回答搜索、分页与错误恢复状态
+  vote/                      # 回答点赞乐观状态与失败回滚
   zhihu/                     # API 客户端和 Zod schema
   markdown/                  # HTML → Markdown
 tests/                       # Vitest 单元测试

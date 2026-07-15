@@ -773,6 +773,31 @@
   background: var(--background-modifier-hover);
 }
 
+.zhihu-answers .zhihu-answer-author__stats > button.is-voted {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+}
+
+.zhihu-answers .zhihu-answer-author__stats > button.is-voted:hover,
+.zhihu-answers .zhihu-answer-author__stats > button.is-voted:focus-visible {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent-hover);
+}
+
+.zhihu-answers .zhihu-answer-author__stats > button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.zhihu-answer-card__vote-feedback {
+  margin: 0;
+  padding: var(--size-4-2) 32px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-error);
+  background: var(--background-modifier-error);
+  font-size: var(--font-ui-small);
+}
+
 .zhihu-answer-card__content {
   min-height: 180px;
   padding: 24px 32px;
@@ -1140,6 +1165,7 @@
 
   .zhihu-question-summary,
   .zhihu-answer-author,
+  .zhihu-answer-card__vote-feedback,
   .zhihu-answer-card__content,
   .zhihu-answer-card__footer {
     padding: 18px;

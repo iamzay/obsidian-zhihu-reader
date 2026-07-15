@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { HttpZhihuGateway, ZhihuGatewayError } from "@/zhihu/gateway";
+import { createZse96Header } from "@/zhihu/fetchSignature";
 import { FixtureZhihuTransport } from "./support/FixtureZhihuTransport";
 
 function fixture(name: string): string {
@@ -48,6 +49,65 @@ describe("HttpZhihuGateway", () => {
     expect(transport.requests[0]?.url).toContain(
       "/api/v4/answers/90071992547409931234?include=",
     );
+  });
+
+  it("posts an authenticated answer vote with a body-bound signature", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: '{"voteup_count":129}',
+    }));
+    const gateway = new HttpZhihuGateway(transport, {
+      getCookieHeader: () =>
+        'z_c0=fixture-session; d_c0="fixture-device-token"',
+    });
+
+    const result = await gateway.setAnswerVote("123", true);
+
+    expect(result).toEqual({ isVoted: true, voteupCount: 129 });
+    expect(transport.requests[0]).toMatchObject({
+      url: "https://www.zhihu.com/api/v4/answers/123/voters",
+      method: "POST",
+      body: '{"type":"up"}',
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://www.zhihu.com",
+      },
+    });
+    expect(transport.requests[0]?.headers["x-zse-96"]).toBe(
+      createZse96Header(
+        "https://www.zhihu.com/api/v4/answers/123/voters",
+        "fixture-device-token",
+        '{"type":"up"}',
+      ),
+    );
+  });
+
+  it("uses neutral to cancel a vote", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: '{"voteup_count":128}',
+    }));
+    const gateway = new HttpZhihuGateway(transport, {
+      getCookieHeader: () => "z_c0=fixture-session",
+    });
+
+    await gateway.setAnswerVote("123", false);
+
+    expect(transport.requests[0]?.body).toBe('{"type":"neutral"}');
+  });
+
+  it("rejects an anonymous vote before sending a request", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: '{"voteup_count":129}',
+    }));
+    const gateway = new HttpZhihuGateway(transport);
+
+    await expect(gateway.setAnswerVote("123", true)).rejects.toMatchObject({
+      kind: "forbidden",
+      message: "请先在 Zhihu Reader 设置中登录知乎，再点赞回答。",
+    });
+    expect(transport.requests).toHaveLength(0);
   });
 
   it("loads an author's answer page through the authenticated gateway", async () => {

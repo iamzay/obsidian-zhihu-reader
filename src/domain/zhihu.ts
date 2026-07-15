@@ -72,10 +72,16 @@ export interface AnswerDocument {
   readonly contentHtml: string;
   readonly excerpt: string;
   readonly voteupCount: number;
+  readonly isVoted: boolean;
   readonly commentCount: number;
   readonly createdTime?: number;
   readonly updatedTime?: number;
   readonly question: QuestionSummary;
+}
+
+export interface AnswerVoteResult {
+  readonly isVoted: boolean;
+  readonly voteupCount: number;
 }
 
 export interface AnswerPage {

@@ -32,4 +32,17 @@ describe("Zhihu fetch signature", () => {
     expect(same).toBe(first);
     expect(differentPath).not.toBe(first);
   });
+
+  it("binds POST signatures to the JSON request body", () => {
+    const url = "https://www.zhihu.com/api/v4/answers/123/voters";
+    const up = createZse96Header(url, "device-token", '{"type":"up"}');
+    const neutral = createZse96Header(
+      url,
+      "device-token",
+      '{"type":"neutral"}',
+    );
+
+    expect(up).not.toBe(neutral);
+    expect(up).not.toBe(createZse96Header(url, "device-token"));
+  });
 });

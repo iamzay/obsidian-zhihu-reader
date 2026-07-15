@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAnswerCommentsUrl,
+  buildAnswerVoteUrl,
   buildAuthorAnswersUrl,
   buildChildCommentsUrl,
   buildHotListUrl,
@@ -10,6 +11,14 @@ import {
 } from "@/zhihu/urls";
 
 describe("buildQuestionFeedsUrl", () => {
+  it("builds the answer vote endpoint and rejects invalid IDs", () => {
+    expect(buildAnswerVoteUrl("90071992547409931234")).toBe(
+      "https://www.zhihu.com/api/v4/answers/90071992547409931234/voters",
+    );
+    expect(() => buildAnswerVoteUrl("123/other")).toThrow(
+      "Answer ID must contain digits only.",
+    );
+  });
   it("builds a filtered answer search URL and validates paging", () => {
     const initial = new URL(buildSearchAnswersUrl("  Obsidian  "));
     expect(initial.pathname).toBe("/api/v4/search_v3");
@@ -124,13 +133,13 @@ describe("buildQuestionFeedsUrl", () => {
     expect(
       buildQuestionFeedsUrl("123456", { limit: 20, order: "default" }),
     ).toBe(
-      "https://www.zhihu.com/api/v4/questions/123456/feeds?limit=20&order=default&include=data%5B*%5D.content%2Cexcerpt%2Cheadline%2Ctarget.author.badge_v2",
+      "https://www.zhihu.com/api/v4/questions/123456/feeds?limit=20&order=default&include=data%5B*%5D.content%2Cexcerpt%2Cheadline%2Ctarget.author.badge_v2%2Ctarget.reaction",
     );
   });
 
   it("uses the product default of six answers", () => {
     expect(buildQuestionFeedsUrl("123456")).toBe(
-      "https://www.zhihu.com/api/v4/questions/123456/feeds?limit=6&include=data%5B*%5D.content%2Cexcerpt%2Cheadline%2Ctarget.author.badge_v2",
+      "https://www.zhihu.com/api/v4/questions/123456/feeds?limit=6&include=data%5B*%5D.content%2Cexcerpt%2Cheadline%2Ctarget.author.badge_v2%2Ctarget.reaction",
     );
   });
 
@@ -156,7 +165,7 @@ describe("buildQuestionFeedsUrl", () => {
     const next =
       "https://www.zhihu.com/api/v4/questions/123456/feeds?limit=6&offset=6";
     expect(buildQuestionFeedsUrl("123456", { pageUrl: next })).toBe(
-      `${next}&include=data%5B*%5D.content%2Cexcerpt%2Cheadline%2Ctarget.author.badge_v2`,
+      `${next}&include=data%5B*%5D.content%2Cexcerpt%2Cheadline%2Ctarget.author.badge_v2%2Ctarget.reaction`,
     );
     expect(() =>
       buildQuestionFeedsUrl("123456", {

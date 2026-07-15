@@ -14,6 +14,7 @@ import type { AnswerCommentListSnapshot } from "@/comments/AnswerCommentList";
 import type { DailyHotListSnapshot } from "@/hotlist/DailyHotList";
 import type { QuestionHistoryEntry } from "@/history/QuestionHistory";
 import type { ZhihuAnswerSearchSnapshot } from "@/search/ZhihuAnswerSearch";
+import type { AnswerVoteState } from "@/vote/AnswerVoteController";
 import {
   AnswerCommentsDialog,
   type AnswerCommentsDialogActions,
@@ -65,6 +66,7 @@ export interface ReaderScreenActions
   readonly next: () => void;
   readonly changeOrder: (order: AnswerOrder) => void;
   readonly retryNavigation: () => void;
+  readonly toggleAnswerVote: (answer: AnswerDocument) => void;
   readonly openComments: (answerId: string) => void;
   readonly saveCurrentAnswer: () => void;
   readonly openNote: (path: string) => void;
@@ -86,6 +88,7 @@ export function ReaderScreen({
   isSearchOpen,
   isDailyHotListOpen,
   saveState,
+  voteState,
   actions,
 }: {
   readonly app: App;
@@ -103,6 +106,7 @@ export function ReaderScreen({
   readonly isSearchOpen: boolean;
   readonly isDailyHotListOpen: boolean;
   readonly saveState: AnswerSaveState;
+  readonly voteState: AnswerVoteState | null;
   readonly actions: ReaderScreenActions;
 }): React.JSX.Element {
   return (
@@ -148,6 +152,7 @@ export function ReaderScreen({
           answerCommentList={answerCommentList}
           isCommentsOpen={isCommentsOpen}
           saveState={saveState}
+          voteState={voteState}
           actions={actions}
         />
       )}
@@ -311,6 +316,7 @@ function ReaderReadyState({
   isCommentsOpen,
   actions,
   saveState,
+  voteState,
 }: {
   readonly app: App;
   readonly snapshot: ReaderSnapshot;
@@ -321,6 +327,7 @@ function ReaderReadyState({
   readonly isCommentsOpen: boolean;
   readonly actions: ReaderScreenActions;
   readonly saveState: AnswerSaveState;
+  readonly voteState: AnswerVoteState | null;
 }): React.JSX.Element {
   return (
     <div className="zhihu-reader-shell">
@@ -340,6 +347,7 @@ function ReaderReadyState({
           prepared={preparedAnswer}
           authorAnswerList={authorAnswerList}
           saveState={saveState}
+          voteState={voteState ?? undefined}
           actions={actions}
           onSave={actions.saveCurrentAnswer}
           onOpenNote={actions.openNote}
@@ -404,6 +412,7 @@ function AnswerCard({
   prepared,
   authorAnswerList,
   saveState,
+  voteState,
   actions,
   onSave,
   onOpenNote,
@@ -412,6 +421,7 @@ function AnswerCard({
   readonly prepared: PreparedAnswer;
   readonly authorAnswerList: AuthorAnswerListSnapshot;
   readonly saveState: AnswerSaveState;
+  readonly voteState?: AnswerVoteState;
   readonly actions: ReaderScreenActions;
   readonly onSave: () => void;
   readonly onOpenNote: (path: string) => void;
@@ -430,7 +440,24 @@ function AnswerCard({
           {answer.author.headline.length > 0 && <span>{answer.author.headline}</span>}
         </div>
         <div className="zhihu-answer-author__stats">
-          <span>{answer.voteupCount} 赞同</span>
+          <button
+            className={voteState?.isVoted === true ? "is-voted" : undefined}
+            type="button"
+            onClick={() => actions.toggleAnswerVote(answer)}
+            disabled={voteState?.isSubmitting === true}
+            aria-pressed={voteState?.isVoted ?? answer.isVoted}
+            aria-label={
+              voteState?.isVoted === true
+                ? `取消赞同，当前 ${voteState.voteupCount} 人赞同`
+                : `赞同回答，当前 ${voteState?.voteupCount ?? answer.voteupCount} 人赞同`
+            }
+          >
+            {voteState?.isSubmitting === true
+              ? "提交中…"
+              : voteState?.isVoted === true
+                ? `${voteState.voteupCount} 已赞同`
+                : `${voteState?.voteupCount ?? answer.voteupCount} 赞同`}
+          </button>
           <button
             type="button"
             onClick={() => actions.openComments(answer.id)}
@@ -440,6 +467,11 @@ function AnswerCard({
           </button>
         </div>
       </header>
+      {voteState?.errorMessage !== null && voteState?.errorMessage !== undefined && (
+        <p className="zhihu-answer-card__vote-feedback is-error" role="alert">
+          {voteState.errorMessage}
+        </p>
+      )}
 
       <section className="zhihu-answer-card__content">
         {markdown !== null ? (

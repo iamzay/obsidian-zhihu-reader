@@ -1,6 +1,6 @@
 const ZHIHU_WEB_ORIGIN = "https://www.zhihu.com";
 const QUESTION_FEEDS_INCLUDE =
-  "data[*].content,excerpt,headline,target.author.badge_v2";
+  "data[*].content,excerpt,headline,target.author.badge_v2,target.reaction";
 const ANSWER_INCLUDE = [
   "content",
   "excerpt",
@@ -8,6 +8,8 @@ const ANSWER_INCLUDE = [
   "comment_count",
   "created_time",
   "updated_time",
+  "reaction",
+  "reaction.relation.voting",
   "question.detail",
   "question.excerpt",
   "question.topics",
@@ -211,6 +213,11 @@ export function buildAnswerUrl(answerId: string): string {
   const url = new URL(`/api/v4/answers/${answerId}`, ZHIHU_WEB_ORIGIN);
   url.searchParams.set("include", ANSWER_INCLUDE);
   return url.toString();
+}
+
+export function buildAnswerVoteUrl(answerId: string): string {
+  assertNumericId(answerId, "Answer");
+  return `${ZHIHU_WEB_ORIGIN}/api/v4/answers/${answerId}/voters`;
 }
 
 function validateQuestionFeedsPageUrl(

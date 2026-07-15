@@ -3,6 +3,7 @@ import { z } from "zod";
 import type {
   AnswerDocument,
   AnswerPage,
+  AnswerVoteResult,
   AuthorAnswerPage,
   AuthorAnswerSummary,
   CommentPage,
@@ -81,7 +82,22 @@ const zhihuAnswerSchema = z
     comment_count: nonNegativeIntegerSchema,
     created_time: optionalTimestampSchema,
     updated_time: optionalTimestampSchema,
+    reaction: z
+      .object({
+        relation: z
+          .object({
+            vote: z.string().catch("Neutral"),
+          })
+          .nullish(),
+      })
+      .nullish(),
     question: zhihuQuestionSchema,
+  })
+  .passthrough();
+
+const zhihuAnswerVoteResponseSchema = z
+  .object({
+    voteup_count: nonNegativeIntegerSchema,
   })
   .passthrough();
 
@@ -277,6 +293,16 @@ export function parseAnswerResponse(text: string): AnswerDocument {
   );
 }
 
+export function parseAnswerVoteResponse(
+  text: string,
+  isVoted: boolean,
+): AnswerVoteResult {
+  return validateResponse(() => {
+    const response = zhihuAnswerVoteResponseSchema.parse(parseResponseJson(text));
+    return { isVoted, voteupCount: response.voteup_count };
+  });
+}
+
 export function parseQuestionFeedsResponse(text: string): AnswerPage {
   return validateResponse(() => {
     const response = zhihuQuestionFeedsResponseSchema.parse(
@@ -417,6 +443,7 @@ function toAnswerDocument(
     contentHtml: answer.content,
     excerpt: answer.excerpt,
     voteupCount: answer.voteup_count,
+    isVoted: answer.reaction?.relation?.vote.toUpperCase() === "UP",
     commentCount: answer.comment_count,
     ...(answer.created_time === undefined
       ? {}

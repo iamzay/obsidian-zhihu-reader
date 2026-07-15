@@ -1,6 +1,7 @@
 import type {
   AnswerDocument,
   AnswerPage,
+  AnswerVoteResult,
   AuthorAnswerPage,
   CommentPage,
   QuestionSummary,
@@ -9,6 +10,7 @@ import type {
 } from "@/domain/zhihu";
 import {
   parseAnswerResponse,
+  parseAnswerVoteResponse,
   parseAuthorAnswersResponse,
   parseCommentsResponse,
   parseHotListResponse,
@@ -25,6 +27,7 @@ import {
 } from "@/zhihu/fetchSignature";
 import {
   buildAnswerUrl,
+  buildAnswerVoteUrl,
   buildAnswerCommentsUrl,
   buildAuthorAnswersUrl,
   buildChildCommentsUrl,
@@ -62,6 +65,7 @@ export class ZhihuGatewayError extends Error {
 export interface ZhihuGateway {
   getQuestion(questionId: string): Promise<QuestionSummary>;
   getAnswer(answerId: string): Promise<AnswerDocument>;
+  setAnswerVote(answerId: string, isVoted: boolean): Promise<AnswerVoteResult>;
   getAnswerCommentPage(
     answerId: string,
     options?: FetchAnswerCommentsOptions,
@@ -118,6 +122,23 @@ export class HttpZhihuGateway implements ZhihuGateway {
     const text = await this.request(buildAnswerUrl(answerId), ZHIHU_WEB_ORIGIN);
     try {
       return parseAnswerResponse(text);
+    } catch (error: unknown) {
+      throw responseError(error);
+    }
+  }
+
+  async setAnswerVote(
+    answerId: string,
+    isVoted: boolean,
+  ): Promise<AnswerVoteResult> {
+    const body = JSON.stringify({ type: isVoted ? "up" : "neutral" });
+    const text = await this.request(
+      buildAnswerVoteUrl(answerId),
+      ZHIHU_WEB_ORIGIN,
+      { method: "POST", body, requireAuth: true },
+    );
+    try {
+      return parseAnswerVoteResponse(text, isVoted);
     } catch (error: unknown) {
       throw responseError(error);
     }
@@ -210,23 +231,48 @@ export class HttpZhihuGateway implements ZhihuGateway {
     }
   }
 
-  private async request(url: string, referer: string): Promise<string> {
+  private async request(
+    url: string,
+    referer: string,
+    options: {
+      readonly method?: "GET" | "POST";
+      readonly body?: string;
+      readonly requireAuth?: boolean;
+    } = {},
+  ): Promise<string> {
     let response;
     try {
       const cookie = this.getCookieHeader();
+      if (options.requireAuth === true && (cookie === undefined || cookie.length === 0)) {
+        throw new ZhihuGatewayError(
+          "forbidden",
+          "请先在 Zhihu Reader 设置中登录知乎，再点赞回答。",
+        );
+      }
       response = await this.transport.request({
         url,
+        method: options.method,
+        body: options.body,
         headers: {
           Accept: "application/json",
           Referer: referer,
           "User-Agent": this.userAgent,
+          ...(options.body === undefined
+            ? {}
+            : {
+                "Content-Type": "application/json",
+                Origin: ZHIHU_WEB_ORIGIN,
+              }),
           ...(cookie === undefined ? {} : { Cookie: cookie }),
           ...(cookie === undefined
             ? {}
-            : authenticatedFetchHeaders(url, cookie)),
+            : authenticatedFetchHeaders(url, cookie, options.body)),
         },
       });
     } catch (error: unknown) {
+      if (error instanceof ZhihuGatewayError) {
+        throw error;
+      }
       throw new ZhihuGatewayError(
         "network",
         "网络请求失败，请检查连接后重试。",

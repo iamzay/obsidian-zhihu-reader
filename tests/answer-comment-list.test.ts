@@ -217,6 +217,7 @@ function commentGateway(
     getSearchAnswerPage: () => Promise.reject(new Error("Not used")),
     getQuestion: () => Promise.reject(new Error("Not used")),
     getAnswer: () => Promise.reject(new Error("Not used")),
+    setAnswerVote: () => Promise.reject(new Error("Not used")),
     getAuthorAnswerPage: () => Promise.reject(new Error("Not used")),
     getAnswerPage: () => Promise.reject(new Error("Not used")),
     getHotList: () => Promise.reject(new Error("Not used")),

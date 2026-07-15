@@ -10,6 +10,14 @@
     "avatar_url": "https://pic.example.com/avatar.jpg"
   },
   "content": "<p>先阅读，再决定是否保存。</p>",
+  "excerpt": "先阅读，再决定是否保存。",
+  "voteup_count": 128,
+  "comment_count": 9,
+  "reaction": {
+    "relation": {
+      "vote": "UP"
+    }
+  },
   "created_time": 1700000000,
   "updated_time": 1700000300,
   "question": {

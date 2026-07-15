@@ -50,6 +50,7 @@ const HEX = "0123456789abcdef";
 export function authenticatedFetchHeaders(
   url: string,
   cookieHeader: string,
+  body?: string,
 ): Readonly<Record<string, string>> {
   const dc0 = cookieValue(cookieHeader, "d_c0");
   if (dc0 === undefined || dc0.length === 0) {
@@ -57,7 +58,7 @@ export function authenticatedFetchHeaders(
   }
   return {
     "x-zse-93": ZHIHU_WEB_ZSE93,
-    "x-zse-96": createZse96Header(url, dc0),
+    "x-zse-96": createZse96Header(url, dc0, body),
     "x-requested-with": "fetch",
   };
 }
