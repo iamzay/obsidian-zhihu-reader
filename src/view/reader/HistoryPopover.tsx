@@ -83,13 +83,32 @@ export function HistoryPopover({
           tabIndex={-1}
         >
           <header>
-            <strong>查询历史</strong>
-            <span>{entries.length} 个问题</span>
+            <div>
+              <strong>查询历史</strong>
+              <span>
+                {entries.length === 0
+                  ? "最近打开的问题"
+                  : `${entries.length} 个问题 · 最近打开`}
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={entries.length === 0}
+              onClick={() => {
+                if (window.confirm("确定清空全部知乎问题查询历史吗？")) {
+                  actions.clearHistory();
+                }
+              }}
+            >
+              清空
+            </button>
           </header>
           {entries.length === 0 ? (
-            <p className="zhihu-history-popover__empty">暂无查询过的问题</p>
+            <div className="zhihu-history-popover__empty">
+              暂无查询过的问题
+            </div>
           ) : (
-            <ul>
+            <ul aria-label="最近查询的问题">
               {entries.map((entry) => (
                 <li key={entry.questionId}>
                   <button
@@ -98,37 +117,30 @@ export function HistoryPopover({
                     onClick={() => actions.openHistoryEntry(entry.questionId)}
                     title={entry.questionTitle}
                   >
-                    <span>{entry.questionTitle}</span>
-                    <time dateTime={entry.lastQueriedAt}>
-                      {formatHistoryDate(entry.lastQueriedAt)}
-                    </time>
+                    <span className="zhihu-history-popover__content">
+                      <strong>{entry.questionTitle}</strong>
+                      <small>
+                        <time
+                          dateTime={entry.lastQueriedAt}
+                          title={formatFullHistoryDate(entry.lastQueriedAt)}
+                        >
+                          {formatHistoryDate(entry.lastQueriedAt)}
+                        </time>
+                      </small>
+                    </span>
                   </button>
                   <button
                     className="zhihu-history-popover__remove"
                     type="button"
                     onClick={() => actions.removeHistoryEntry(entry.questionId)}
                     aria-label={`删除历史：${entry.questionTitle}`}
-                    title="删除"
+                    title="从历史中删除"
                   >
-                    ×
+                    <span aria-hidden="true">×</span>
                   </button>
                 </li>
               ))}
             </ul>
-          )}
-          {entries.length > 0 && (
-            <footer>
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm("确定清空全部知乎问题查询历史吗？")) {
-                    actions.clearHistory();
-                  }
-                }}
-              >
-                清空历史
-              </button>
-            </footer>
           )}
         </div>
       )}
@@ -136,11 +148,64 @@ export function HistoryPopover({
   );
 }
 
-const historyDateFormatter = new Intl.DateTimeFormat("zh-CN", {
+const historyTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const historyMonthDayFormatter = new Intl.DateTimeFormat("zh-CN", {
   month: "short",
   day: "numeric",
 });
 
-function formatHistoryDate(value: string): string {
-  return historyDateFormatter.format(new Date(value));
+const historyYearDateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+const historyFullDateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+export function formatHistoryDate(
+  value: string,
+  now = new Date(),
+): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "时间未知";
+  }
+  const today = startOfLocalDay(now);
+  const queriedDay = startOfLocalDay(date);
+  const dayDifference = Math.round(
+    (today.getTime() - queriedDay.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  if (dayDifference === 0) {
+    return `今天 ${historyTimeFormatter.format(date)}`;
+  }
+  if (dayDifference === 1) {
+    return `昨天 ${historyTimeFormatter.format(date)}`;
+  }
+  if (date.getFullYear() === now.getFullYear()) {
+    return historyMonthDayFormatter.format(date);
+  }
+  return historyYearDateFormatter.format(date);
+}
+
+function formatFullHistoryDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "查询时间未知"
+    : historyFullDateFormatter.format(date);
+}
+
+function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }

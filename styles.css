@@ -117,7 +117,8 @@
   position: relative;
 }
 
-.zhihu-hot-popover {
+.zhihu-hot-popover,
+.zhihu-history-popover {
   position: absolute;
   z-index: var(--layer-popover);
   top: calc(100% + var(--size-4-2));
@@ -133,7 +134,8 @@
   box-shadow: var(--shadow-l);
 }
 
-.zhihu-hot-popover > header {
+.zhihu-hot-popover > header,
+.zhihu-history-popover > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -142,22 +144,26 @@
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.zhihu-hot-popover > header > div {
+.zhihu-hot-popover > header > div,
+.zhihu-history-popover > header > div {
   display: flex;
   min-width: 0;
   flex-direction: column;
 }
 
-.zhihu-hot-popover > header span {
+.zhihu-hot-popover > header span,
+.zhihu-history-popover > header span {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
-.zhihu-hot-popover > header button {
+.zhihu-hot-popover > header button,
+.zhihu-history-popover > header button {
   flex: 0 0 auto;
 }
 
-.zhihu-hot-popover ol {
+.zhihu-hot-popover ol,
+.zhihu-history-popover ul {
   min-height: 0;
   margin: 0;
   padding: var(--size-4-2);
@@ -166,7 +172,9 @@
   list-style: none;
 }
 
-.zhihu-hot-popover li > button {
+.zhihu-hot-popover li > button,
+.zhihu-history-popover li > .zhihu-history-popover__title {
+  appearance: none;
   display: flex;
   width: 100%;
   height: auto;
@@ -177,11 +185,14 @@
   color: var(--text-normal);
   background: transparent;
   box-shadow: none;
+  font: inherit;
   text-align: left;
 }
 
 .zhihu-hot-popover li > button:hover,
-.zhihu-hot-popover li > button:focus-visible {
+.zhihu-hot-popover li > button:focus-visible,
+.zhihu-history-popover li > .zhihu-history-popover__title:hover,
+.zhihu-history-popover li > .zhihu-history-popover__title:focus-visible {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
   box-shadow: none;
@@ -240,7 +251,8 @@
 
 .zhihu-hot-popover__loading,
 .zhihu-hot-popover__empty,
-.zhihu-hot-popover__error {
+.zhihu-hot-popover__error,
+.zhihu-history-popover__empty {
   padding: var(--size-4-6);
   color: var(--text-muted);
   text-align: center;
@@ -261,132 +273,80 @@
   padding: 0 0 var(--size-4-4);
 }
 
-.zhihu-history-popover {
-  position: absolute;
-  z-index: var(--layer-popover);
-  top: calc(100% + var(--size-4-2));
-  right: 0;
-  display: flex;
-  width: min(350px, calc(100vw - 24px));
-  max-height: 310px;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-l);
-  background: var(--background-primary);
-  box-shadow: var(--shadow-l);
+.zhihu-history-popover li {
+  position: relative;
 }
 
-.zhihu-history-popover > header,
-.zhihu-history-popover > footer {
+.zhihu-answers .zhihu-history-popover li > .zhihu-history-popover__title {
+  all: unset;
+  box-sizing: border-box;
   display: flex;
+  width: 100%;
+  min-width: 0;
   align-items: center;
-  justify-content: space-between;
   gap: var(--size-4-3);
   padding: var(--size-4-3);
-}
-
-.zhihu-history-popover > header {
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.zhihu-history-popover > header span {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-}
-
-.zhihu-history-popover > footer {
-  justify-content: flex-end;
-  border-top: 1px solid var(--background-modifier-border);
-}
-
-.zhihu-history-popover ul {
-  margin: 0;
-  padding: var(--size-4-2);
-  overflow-y: auto;
-  list-style: none;
-}
-
-.zhihu-history-popover li {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-2);
-  padding: 2px var(--size-4-1) 2px var(--size-4-3);
-  border-radius: var(--radius-s);
-}
-
-.zhihu-history-popover li:hover,
-.zhihu-history-popover li:focus-within {
-  background: var(--background-modifier-hover);
-}
-
-.zhihu-history-popover__title {
-  display: flex;
-  height: auto;
-  min-width: 0;
-  overflow: hidden;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 2px;
-  padding: var(--size-4-2) 0;
-  border: 0;
-  border-radius: 0;
+  padding-right: 52px;
   color: var(--text-normal);
-  background: transparent;
-  box-shadow: none;
-  text-align: left;
   cursor: pointer;
 }
 
-.zhihu-history-popover__title:hover {
-  color: var(--text-normal);
-  background: transparent;
-  box-shadow: none;
+.zhihu-answers .zhihu-history-popover li:hover > .zhihu-history-popover__title,
+.zhihu-answers .zhihu-history-popover li > .zhihu-history-popover__title:focus-visible {
+  background: var(--background-modifier-hover);
 }
 
-.zhihu-history-popover__title span {
-  width: 100%;
+.zhihu-history-popover__content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.zhihu-history-popover__content > strong {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.4;
 }
 
-.zhihu-history-popover__title time {
+.zhihu-history-popover__content small {
   color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-normal);
 }
 
-.zhihu-history-popover__remove {
-  flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
+.zhihu-answers .zhihu-history-popover li > .zhihu-history-popover__remove {
+  appearance: none;
+  position: absolute;
+  top: 50%;
+  right: var(--size-4-3);
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
   padding: 0;
-  border-color: transparent;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: var(--radius-s);
   color: var(--text-muted);
   background: transparent;
   box-shadow: none;
-  opacity: 0.45;
+  font: inherit;
+  opacity: 0.35;
 }
 
-.zhihu-history-popover__remove:hover {
+.zhihu-answers .zhihu-history-popover li > .zhihu-history-popover__remove:hover,
+.zhihu-answers .zhihu-history-popover li > .zhihu-history-popover__remove:focus-visible {
   color: var(--text-error);
   background: var(--background-modifier-error-hover);
   box-shadow: none;
+  opacity: 1;
 }
 
 .zhihu-history-popover li:hover .zhihu-history-popover__remove,
 .zhihu-history-popover__remove:focus-visible {
   opacity: 1;
-}
-
-.zhihu-history-popover__empty {
-  margin: 0;
-  padding: var(--size-4-6);
-  color: var(--text-muted);
-  text-align: center;
 }
 
 .zhihu-reader-toolbar__login {
