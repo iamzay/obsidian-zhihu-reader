@@ -50,6 +50,43 @@ describe("HttpZhihuGateway", () => {
     );
   });
 
+  it("loads the daily hot list through the authenticated transport seam", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("hot-list.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport);
+
+    const items = await gateway.getHotList();
+
+    expect(items.map(({ questionId }) => questionId)).toEqual([
+      "1993016651038364760",
+      "123456789",
+    ]);
+    expect(transport.requests[0]?.url).toBe(
+      "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50&mobile=true",
+    );
+    expect(transport.requests[0]?.headers.Referer).toBe(
+      "https://www.zhihu.com/hot",
+    );
+  });
+
+  it("classifies a hot-list authentication response as forbidden", async () => {
+    const gateway = new HttpZhihuGateway(
+      new FixtureZhihuTransport(() => ({
+        status: 200,
+        text: JSON.stringify({
+          error: { code: 101, message: "身份未经过验证" },
+        }),
+      })),
+    );
+
+    await expect(gateway.getHotList()).rejects.toMatchObject({
+      kind: "forbidden",
+      message: "身份未经过验证",
+    });
+  });
+
   it.each([
     [403, "forbidden"],
     [404, "not-found"],

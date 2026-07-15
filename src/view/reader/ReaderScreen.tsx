@@ -9,7 +9,12 @@ import type {
   ZhihuTarget,
 } from "@/domain/zhihu";
 import type { ZhihuAuthSnapshot } from "@/auth/types";
+import type { DailyHotListSnapshot } from "@/hotlist/DailyHotList";
 import type { QuestionHistoryEntry } from "@/history/QuestionHistory";
+import {
+  DailyHotPopover,
+  type DailyHotPopoverActions,
+} from "@/view/reader/DailyHotPopover";
 import {
   HistoryPopover,
   type HistoryPopoverActions,
@@ -32,7 +37,9 @@ export type AnswerSaveState =
     }
   | { readonly status: "error"; readonly message: string };
 
-export interface ReaderScreenActions extends HistoryPopoverActions {
+export interface ReaderScreenActions
+  extends HistoryPopoverActions,
+    DailyHotPopoverActions {
   readonly openUrlModal: () => void;
   readonly openFromClipboard: () => void;
   readonly retry: () => void;
@@ -52,6 +59,8 @@ export function ReaderScreen({
   auth,
   historyEntries,
   isHistoryOpen,
+  dailyHotList,
+  isDailyHotListOpen,
   saveState,
   actions,
 }: {
@@ -62,6 +71,8 @@ export function ReaderScreen({
   readonly auth: ZhihuAuthSnapshot;
   readonly historyEntries: readonly QuestionHistoryEntry[];
   readonly isHistoryOpen: boolean;
+  readonly dailyHotList: DailyHotListSnapshot;
+  readonly isDailyHotListOpen: boolean;
   readonly saveState: AnswerSaveState;
   readonly actions: ReaderScreenActions;
 }): React.JSX.Element {
@@ -75,6 +86,9 @@ export function ReaderScreen({
         historyEntries={historyEntries}
         isHistoryOpen={isHistoryOpen}
         historyActions={actions}
+        dailyHotList={dailyHotList}
+        isDailyHotListOpen={isDailyHotListOpen}
+        dailyHotActions={actions}
       />
       {snapshot.phase === "idle" && (
         <EmptyReaderState
@@ -112,6 +126,9 @@ function ReaderToolbar({
   historyEntries,
   isHistoryOpen,
   historyActions,
+  dailyHotList,
+  isDailyHotListOpen,
+  dailyHotActions,
 }: {
   readonly auth: ZhihuAuthSnapshot;
   readonly onOpenUrl: () => void;
@@ -120,6 +137,9 @@ function ReaderToolbar({
   readonly historyEntries: readonly QuestionHistoryEntry[];
   readonly isHistoryOpen: boolean;
   readonly historyActions: HistoryPopoverActions;
+  readonly dailyHotList: DailyHotListSnapshot;
+  readonly isDailyHotListOpen: boolean;
+  readonly dailyHotActions: DailyHotPopoverActions;
 }): React.JSX.Element {
   return (
     <header className="zhihu-reader-toolbar">
@@ -136,6 +156,11 @@ function ReaderToolbar({
         <button type="button" onClick={onOpenUrl} aria-label="打开知乎链接">
           打开链接
         </button>
+        <DailyHotPopover
+          snapshot={dailyHotList}
+          isOpen={isDailyHotListOpen}
+          actions={dailyHotActions}
+        />
         <HistoryPopover
           entries={historyEntries}
           isOpen={isHistoryOpen}

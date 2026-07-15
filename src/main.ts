@@ -179,6 +179,14 @@ export default class ZhihuAnswersPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "show-zhihu-daily-hot-list",
+      name: "查看每日热榜",
+      callback: () => {
+        void this.showDailyHotList();
+      },
+    });
+
+    this.addCommand({
       id: "open-zhihu-content-from-clipboard",
       name: "从剪贴板打开",
       callback: () => {
@@ -394,6 +402,16 @@ export default class ZhihuAnswersPlugin extends Plugin {
     )[0];
     if (leaf?.view instanceof ZhihuAnswersView) {
       leaf.view.openHistoryPopover();
+    }
+  }
+
+  private async showDailyHotList(): Promise<void> {
+    await this.activateView();
+    const leaf = this.app.workspace.getLeavesOfType(
+      VIEW_TYPE_ZHIHU_ANSWERS,
+    )[0];
+    if (leaf?.view instanceof ZhihuAnswersView) {
+      leaf.view.openDailyHotListPopover();
     }
   }
 }

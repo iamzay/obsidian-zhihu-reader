@@ -42,9 +42,15 @@ npm run check
 GET https://www.zhihu.com/api/v4/questions/{questionId}/feeds?limit=20&order=default
 ```
 
+每日热榜使用相同参考实现中的只读接口：
+
+```text
+GET https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50&mobile=true
+```
+
 - 返回体主要由 `data` 和 `paging` 组成，回答数据位于 `data[*].target`。
 - 请求统一携带浏览器 User-Agent；需要登录态时额外携带知乎 Cookie。
-- 写操作及部分登录态接口依赖 `d_c0` 和 `x-zse-93` / `x-zse-96` 签名。本项目当前只搭建匿名读取客户端，不实现签名写操作。
+- 登录态请求会复用插件保存的知乎 Cookie，并根据 `d_c0` 生成 `x-zse-93` / `x-zse-96` 请求头；本项目不实现知乎写操作。
 - Obsidian 端通过 `requestUrl` 请求，以避开普通浏览器 `fetch` 的 CORS 限制；响应在进入业务层前用 Zod 校验。
 - 回答 HTML 通过 Turndown 转为 Markdown，转换器位于 `src/markdown/toMarkdown.ts`。
 
@@ -54,6 +60,7 @@ GET https://www.zhihu.com/api/v4/questions/{questionId}/feeds?limit=20&order=def
 src/
   main.ts                    # 插件入口与视图注册
   view/                      # React 视图
+  hotlist/                   # 每日热榜状态、缓存与错误恢复
   zhihu/                     # API 客户端和 Zod schema
   markdown/                  # HTML → Markdown
 tests/                       # Vitest 单元测试

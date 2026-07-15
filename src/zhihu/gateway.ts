@@ -2,9 +2,11 @@ import type {
   AnswerDocument,
   AnswerPage,
   QuestionSummary,
+  ZhihuHotListItem,
 } from "@/domain/zhihu";
 import {
   parseAnswerResponse,
+  parseHotListResponse,
   parseQuestionResponse,
   parseQuestionFeedsResponse,
   ZhihuApiResponseError,
@@ -17,6 +19,7 @@ import {
 } from "@/zhihu/fetchSignature";
 import {
   buildAnswerUrl,
+  buildHotListUrl,
   buildQuestionFeedsUrl,
   buildQuestionUrl,
   type FetchQuestionAnswersOptions,
@@ -45,6 +48,7 @@ export class ZhihuGatewayError extends Error {
 export interface ZhihuGateway {
   getQuestion(questionId: string): Promise<QuestionSummary>;
   getAnswer(answerId: string): Promise<AnswerDocument>;
+  getHotList(limit?: number): Promise<readonly ZhihuHotListItem[]>;
   getAnswerPage(
     questionId: string,
     options?: FetchQuestionAnswersOptions,
@@ -84,6 +88,18 @@ export class HttpZhihuGateway implements ZhihuGateway {
     const text = await this.request(buildAnswerUrl(answerId), ZHIHU_WEB_ORIGIN);
     try {
       return parseAnswerResponse(text);
+    } catch (error: unknown) {
+      throw responseError(error);
+    }
+  }
+
+  async getHotList(limit = 50): Promise<readonly ZhihuHotListItem[]> {
+    const text = await this.request(
+      buildHotListUrl(limit),
+      `${ZHIHU_WEB_ORIGIN}/hot`,
+    );
+    try {
+      return parseHotListResponse(text);
     } catch (error: unknown) {
       throw responseError(error);
     }
@@ -158,7 +174,11 @@ export class HttpZhihuGateway implements ZhihuGateway {
 
 function responseError(error: unknown): ZhihuGatewayError {
   if (error instanceof ZhihuApiResponseError) {
-    return new ZhihuGatewayError("response", error.message, { cause: error });
+    return new ZhihuGatewayError(
+      error.code === "101" ? "forbidden" : "response",
+      error.message,
+      { cause: error },
+    );
   }
   if (error instanceof ZhihuResponseValidationError) {
     return new ZhihuGatewayError(

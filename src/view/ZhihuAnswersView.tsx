@@ -9,6 +9,10 @@ import type {
   ZhihuTarget,
 } from "@/domain/zhihu";
 import type { ZhihuAuthSnapshot } from "@/auth/types";
+import {
+  DailyHotList,
+  type DailyHotListSnapshot,
+} from "@/hotlist/DailyHotList";
 import type {
   QuestionHistoryEntry,
 } from "@/history/QuestionHistory";
@@ -43,12 +47,16 @@ export interface ZhihuAnswersViewActions {
 export class ZhihuAnswersView extends ItemView {
   private root: Root | null = null;
   private readonly session: ReaderSession;
+  private readonly dailyHotList: DailyHotList;
   private unsubscribeSession: (() => void) | null = null;
+  private unsubscribeDailyHotList: (() => void) | null = null;
   private snapshot: ReaderSnapshot;
+  private dailyHotListSnapshot: DailyHotListSnapshot;
   private authSnapshot: ZhihuAuthSnapshot;
   private previousAnswerId: string | null = null;
   private historyEntries: readonly QuestionHistoryEntry[];
   private isHistoryOpen = false;
+  private isDailyHotListOpen = false;
   private shouldRecordQuery = false;
   private savingAnswerId: string | null = null;
   private readonly savedPaths = new Map<string, string>();
@@ -65,7 +73,9 @@ export class ZhihuAnswersView extends ItemView {
   ) {
     super(leaf);
     this.session = new ReaderSession(gateway, optionsProvider);
+    this.dailyHotList = new DailyHotList(gateway);
     this.snapshot = this.session.snapshot();
+    this.dailyHotListSnapshot = this.dailyHotList.snapshot();
     this.authSnapshot = initialAuth;
     this.historyEntries = initialHistory;
   }
@@ -107,6 +117,10 @@ export class ZhihuAnswersView extends ItemView {
         });
       }
     });
+    this.unsubscribeDailyHotList = this.dailyHotList.subscribe((snapshot) => {
+      this.dailyHotListSnapshot = snapshot;
+      this.render();
+    });
     this.render();
     return Promise.resolve();
   }
@@ -114,7 +128,10 @@ export class ZhihuAnswersView extends ItemView {
   override onClose(): Promise<void> {
     this.unsubscribeSession?.();
     this.unsubscribeSession = null;
+    this.unsubscribeDailyHotList?.();
+    this.unsubscribeDailyHotList = null;
     this.session.dispose();
+    this.dailyHotList.dispose();
     this.root?.unmount();
     this.root = null;
     return Promise.resolve();
@@ -131,8 +148,16 @@ export class ZhihuAnswersView extends ItemView {
   }
 
   openHistoryPopover(): void {
+    this.isDailyHotListOpen = false;
     this.isHistoryOpen = true;
     this.render();
+  }
+
+  openDailyHotListPopover(): void {
+    this.isHistoryOpen = false;
+    this.isDailyHotListOpen = true;
+    this.render();
+    void this.dailyHotList.load();
   }
 
   setAuthSnapshot(snapshot: ZhihuAuthSnapshot): void {
@@ -230,6 +255,9 @@ export class ZhihuAnswersView extends ItemView {
       },
       toggleHistory: () => {
         this.isHistoryOpen = !this.isHistoryOpen;
+        if (this.isHistoryOpen) {
+          this.isDailyHotListOpen = false;
+        }
         this.render();
       },
       closeHistory: () => {
@@ -245,6 +273,25 @@ export class ZhihuAnswersView extends ItemView {
       },
       clearHistory: () => {
         this.actions.clearHistory();
+      },
+      toggleDailyHotList: () => {
+        this.isDailyHotListOpen = !this.isDailyHotListOpen;
+        if (this.isDailyHotListOpen) {
+          this.isHistoryOpen = false;
+          void this.dailyHotList.load();
+        }
+        this.render();
+      },
+      closeDailyHotList: () => {
+        this.isDailyHotListOpen = false;
+        this.render();
+      },
+      refreshDailyHotList: () => {
+        void this.dailyHotList.load(true);
+      },
+      openDailyHotItem: (questionId: string) => {
+        this.isDailyHotListOpen = false;
+        void this.openTarget({ type: "question", questionId });
       },
       saveCurrentAnswer: () => {
         void this.saveCurrentAnswer();
@@ -264,6 +311,8 @@ export class ZhihuAnswersView extends ItemView {
           auth={this.authSnapshot}
           historyEntries={this.historyEntries}
           isHistoryOpen={this.isHistoryOpen}
+          dailyHotList={this.dailyHotListSnapshot}
+          isDailyHotListOpen={this.isDailyHotListOpen}
           saveState={this.currentSaveState()}
           actions={this.readerActions()}
         />

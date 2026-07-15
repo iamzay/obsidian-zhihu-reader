@@ -5,6 +5,7 @@ import type {
   AnswerPage,
   QuestionReference,
   QuestionSummary,
+  ZhihuHotListItem,
   ZhihuAuthor,
 } from "@/domain/zhihu";
 
@@ -97,6 +98,37 @@ const zhihuQuestionFeedsResponseSchema = z.object({
     .passthrough(),
 });
 
+const zhihuHotListItemSchema = z
+  .object({
+    card_id: z.string().optional(),
+    detail_text: z.string().catch(""),
+    target: z
+      .object({
+        type: z.string(),
+        id: z.union([z.string(), z.number()]).optional(),
+        title: z.string().optional(),
+        excerpt: z.string().catch(""),
+        url: z.string().optional(),
+        answer_count: nonNegativeIntegerSchema,
+        follower_count: nonNegativeIntegerSchema,
+      })
+      .passthrough(),
+    children: z
+      .array(
+        z
+          .object({
+            thumbnail: optionalUrlSchema,
+          })
+          .passthrough(),
+      )
+      .catch([]),
+  })
+  .passthrough();
+
+const zhihuHotListResponseSchema = z.object({
+  data: z.array(zhihuHotListItemSchema),
+});
+
 const zhihuErrorResponseSchema = z.object({
   error: z
     .object({
@@ -148,6 +180,31 @@ export function parseQuestionFeedsResponse(text: string): AnswerPage {
       nextPageUrl: response.paging.next ?? null,
       previousPageUrl: response.paging.previous ?? null,
     };
+  });
+}
+
+export function parseHotListResponse(text: string): readonly ZhihuHotListItem[] {
+  return validateResponse(() => {
+    const response = zhihuHotListResponseSchema.parse(parseResponseJson(text));
+    return response.data.flatMap((item, index) => {
+      if (item.target.type !== "question" || item.target.title === undefined) {
+        return [];
+      }
+      const questionId = hotQuestionId(item);
+      const thumbnailUrl = item.children.find(
+        ({ thumbnail }) => thumbnail !== undefined,
+      )?.thumbnail;
+      return [{
+        rank: index + 1,
+        questionId,
+        title: item.target.title,
+        excerpt: item.target.excerpt,
+        heatLabel: item.detail_text,
+        answerCount: item.target.answer_count,
+        followerCount: item.target.follower_count,
+        ...(thumbnailUrl === undefined ? {} : { thumbnailUrl }),
+      }];
+    });
   });
 }
 
@@ -239,4 +296,27 @@ function toAuthor(
     ...(author.avatar_url === undefined ? {} : { avatarUrl: author.avatar_url }),
     ...(profileUrl === undefined ? {} : { profileUrl }),
   };
+}
+
+function hotQuestionId(
+  item: z.output<typeof zhihuHotListItemSchema>,
+): string {
+  const stringId = typeof item.target.id === "string" && /^\d+$/u.test(item.target.id)
+    ? item.target.id
+    : null;
+  if (stringId !== null) {
+    return stringId;
+  }
+  const cardId = /^Q_(\d+)$/u.exec(item.card_id ?? "")?.[1];
+  if (cardId !== undefined) {
+    return cardId;
+  }
+  const urlId = /\/questions?\/(\d+)(?:\/|$)/u.exec(item.target.url ?? "")?.[1];
+  if (urlId !== undefined) {
+    return urlId;
+  }
+  if (typeof item.target.id === "number" && Number.isSafeInteger(item.target.id)) {
+    return String(item.target.id);
+  }
+  throw new Error("Zhihu hot list item does not contain an exact question ID.");
 }

@@ -23,6 +23,7 @@
 | `ReaderSession` | `open`、`next`、`previous`、`snapshot` | 首项队列、去重、分页、排序、并发和失败恢复 |
 | `PluginDataRepository` | `load`、`save` | Zod 默认值、迁移、Obsidian `loadData/saveData` |
 | `QuestionHistory` | `record`、`list`、`remove`、`clear` | 问题 ID 去重、排序、上限和持久化 |
+| `DailyHotList` | `load`、`snapshot`、`subscribe` | 请求合并、短时缓存、刷新、过期结果和错误恢复 |
 | `AnswerNoteWriter` | `save` | 路径模板、frontmatter、冲突、原子写入和附件 |
 
 `ZhihuGateway` 面向真正的外部依赖知乎。其实现内部设置 `ZhihuTransport` seam：生产使用 Obsidian `requestUrl` adapter，测试使用 fixture adapter。调用者不接触 HTTP URL、原始 JSON 或 Zod schema。
@@ -46,7 +47,9 @@ flowchart LR
     T07 --> T08["ZA-08 富内容与图片本地化"]
     T06 --> T09["ZA-09 知乎登录"]
     T08 --> T10["ZA-10 体验与兼容性收口"]
-    T09 --> T10
+    T09 --> T12["ZA-12 每日热榜"]
+    T04 --> T12
+    T12 --> T10
     T10 --> T11["ZA-11 发布准备"]
 ```
 
@@ -308,6 +311,26 @@ tests/zhihu-schemas.test.ts
 - 从旧数据升级不丢设置和历史。
 - 禁用或卸载插件不会影响已保存的 Markdown。
 
+### ZA-12 每日热榜
+
+目标：在不引入首页推荐流的前提下，为阅读器提供一个轻量的问题发现入口。
+
+实现内容：
+
+- 扩展 `ZhihuGateway`，使用 Zod 将热榜响应转换为字符串问题 ID 的领域模型。
+- 实现 `DailyHotList` 模块，封装重复请求合并、5 分钟内存缓存、强制刷新、错误恢复和销毁后的过期结果防护。
+- 在方案 A 工具栏实现 `DailyHotPopover`，覆盖加载、列表、空、错误、登录要求和重试状态。
+- 新增 `Zhihu Reader: 查看每日热榜` 命令，并与工具栏入口复用同一视图状态。
+- 点击热榜条目后复用问题阅读流程；只浏览榜单不写历史和 Vault。
+
+验收标准：
+
+- 热榜 ID 不发生数值精度损失，字段缺失时有稳定默认值。
+- 并发打开只发起一个请求，缓存有效时不重复请求，显式刷新可更新列表。
+- 每日热榜与历史 Popover 互斥，Escape、外部点击和关闭后的焦点返回符合 UI 规范。
+- 未登录、网络错误、空列表和结构变化均提供可恢复界面，不替换当前回答。
+- 点击条目成功进入问题页后才记录问题历史。
+
 ## 5. 推荐里程碑
 
 ### Milestone A：可查询、可阅读
@@ -324,7 +347,7 @@ tests/zhihu-schemas.test.ts
 
 ### Milestone D：可发布版本
 
-完成 ZA-09 至 ZA-11。登录、兼容性、无障碍和发布流程完成。
+完成 ZA-09 至 ZA-12。登录、每日热榜、兼容性、无障碍和发布流程完成。
 
 ## 6. 第一项建议
 

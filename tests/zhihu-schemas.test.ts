@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseAnswerResponse,
+  parseHotListResponse,
   parseQuestionFeedsResponse,
   parseQuestionResponse,
   ZhihuApiResponseError,
@@ -45,6 +46,38 @@ describe("Zhihu response parsing", () => {
     expect(answer.url).toBe(
       "https://www.zhihu.com/question/123456789/answer/90071992547409931234",
     );
+  });
+
+  it("parses hot list items without losing an unsafe numeric question id", () => {
+    const items = parseHotListResponse(fixture("hot-list.json"));
+
+    expect(items).toHaveLength(2);
+    expect(items[0]).toEqual({
+      rank: 1,
+      questionId: "1993016651038364760",
+      title: "高校教师为什么会成为压力最大的职业之一？",
+      excerpt: "关于职业压力、收入和社会地位的讨论。",
+      heatLabel: "1080 万热度",
+      answerCount: 398,
+      followerCount: 1143,
+      thumbnailUrl: "https://picx.zhimg.com/v2-hot-list.png",
+    });
+  });
+
+  it("recovers an exact hot-list ID from a singular question URL", () => {
+    const [item] = parseHotListResponse(JSON.stringify({
+      data: [{
+        detail_text: "100 万热度",
+        target: {
+          type: "question",
+          id: 9_007_199_254_740_992,
+          title: "问题标题",
+          url: "https://www.zhihu.com/question/90071992547409931234",
+        },
+      }],
+    }));
+
+    expect(item?.questionId).toBe("90071992547409931234");
   });
 
   it("rejects an unsafe numeric ID instead of accepting rounded data", () => {

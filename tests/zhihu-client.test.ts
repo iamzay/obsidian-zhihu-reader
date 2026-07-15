@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { buildQuestionFeedsUrl } from "@/zhihu/urls";
+import { buildHotListUrl, buildQuestionFeedsUrl } from "@/zhihu/urls";
 
 describe("buildQuestionFeedsUrl", () => {
+  it("builds the mobile daily hot list endpoint used by the reference client", () => {
+    expect(buildHotListUrl()).toBe(
+      "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50&mobile=true",
+    );
+    expect(() => buildHotListUrl(51)).toThrow(
+      "Hot list limit must be an integer between 1 and 50.",
+    );
+  });
+
   it("builds the question feeds endpoint used by Zhihu", () => {
     expect(
       buildQuestionFeedsUrl("123456", { limit: 20, order: "default" }),

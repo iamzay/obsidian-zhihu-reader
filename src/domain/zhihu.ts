@@ -53,6 +53,17 @@ export interface AnswerPage {
   readonly previousPageUrl: string | null;
 }
 
+export interface ZhihuHotListItem {
+  readonly rank: number;
+  readonly questionId: string;
+  readonly title: string;
+  readonly excerpt: string;
+  readonly heatLabel: string;
+  readonly answerCount: number;
+  readonly followerCount: number;
+  readonly thumbnailUrl?: string;
+}
+
 export type ReaderPhase = "idle" | "loading" | "ready" | "error";
 export type AnswerOrder = "default" | "updated";
 

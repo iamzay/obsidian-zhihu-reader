@@ -44,6 +44,10 @@ class FakeGateway implements ZhihuGateway {
     return Promise.resolve(this.anchor);
   }
 
+  getHotList(): Promise<readonly never[]> {
+    return Promise.resolve([]);
+  }
+
   async getAnswerPage(
     questionId: string,
     options: FetchQuestionAnswersOptions = {},

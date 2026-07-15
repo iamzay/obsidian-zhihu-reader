@@ -24,6 +24,19 @@ export interface FetchQuestionAnswersOptions {
   pageUrl?: string;
 }
 
+export function buildHotListUrl(limit = 50): string {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+    throw new Error("Hot list limit must be an integer between 1 and 50.");
+  }
+  const url = new URL(
+    "/api/v3/feed/topstory/hot-lists/total",
+    ZHIHU_WEB_ORIGIN,
+  );
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("mobile", "true");
+  return url.toString();
+}
+
 export function buildQuestionFeedsUrl(
   questionId: string,
   options: FetchQuestionAnswersOptions = {},

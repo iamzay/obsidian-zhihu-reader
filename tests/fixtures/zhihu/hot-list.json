@@ -1,0 +1,41 @@
+{
+  "data": [
+    {
+      "type": "hot_list_feed",
+      "card_id": "Q_1993016651038364760",
+      "detail_text": "1080 万热度",
+      "children": [
+        {
+          "type": "answer",
+          "thumbnail": "https://picx.zhimg.com/v2-hot-list.png"
+        }
+      ],
+      "target": {
+        "type": "question",
+        "id": 1993016651038364700,
+        "title": "高校教师为什么会成为压力最大的职业之一？",
+        "excerpt": "关于职业压力、收入和社会地位的讨论。",
+        "answer_count": 398,
+        "follower_count": 1143,
+        "url": "https://api.zhihu.com/questions/1993016651038364760"
+      }
+    },
+    {
+      "type": "hot_list_feed",
+      "card_id": "Q_123456789",
+      "detail_text": "582 万热度",
+      "children": [],
+      "target": {
+        "type": "question",
+        "id": "123456789",
+        "title": "如何建立稳定的阅读工作流？",
+        "excerpt": "从阅读到知识沉淀。",
+        "answer_count": 18,
+        "follower_count": 204
+      }
+    }
+  ],
+  "paging": {
+    "is_end": true
+  }
+}
