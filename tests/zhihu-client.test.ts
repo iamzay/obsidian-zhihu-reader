@@ -90,6 +90,27 @@ describe("buildQuestionFeedsUrl", () => {
     ).toThrow("Invalid Zhihu author answers page URL.");
   });
 
+  it("upgrades trusted HTTP author answer paging URLs returned by Zhihu", () => {
+    const next =
+      "http://www.zhihu.com/api/v4/members/fixture-author/answers?limit=10&offset=10&sort_by=created";
+    const result = new URL(
+      buildAuthorAnswersUrl("fixture-author", { pageUrl: next }),
+    );
+
+    expect(result.protocol).toBe("https:");
+    expect(result.hostname).toBe("www.zhihu.com");
+    expect(result.pathname).toBe(
+      "/api/v4/members/fixture-author/answers",
+    );
+    expect(result.searchParams.get("offset")).toBe("10");
+    expect(() =>
+      buildAuthorAnswersUrl("fixture-author", {
+        pageUrl:
+          "http://example.com/api/v4/members/fixture-author/answers?offset=10",
+      }),
+    ).toThrow("Invalid Zhihu author answers page URL.");
+  });
+
   it("builds the mobile daily hot list endpoint used by the reference client", () => {
     expect(buildHotListUrl()).toBe(
       "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50&mobile=true",

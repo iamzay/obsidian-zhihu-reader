@@ -234,13 +234,14 @@ function validateAuthorAnswersPageUrl(
 ): string {
   const url = new URL(pageUrl);
   if (
-    url.protocol !== "https:" ||
+    (url.protocol !== "https:" && url.protocol !== "http:") ||
     url.hostname !== "www.zhihu.com" ||
     url.pathname !==
       `/api/v4/members/${encodeURIComponent(authorIdentifier)}/answers`
   ) {
     throw new Error("Invalid Zhihu author answers page URL.");
   }
+  url.protocol = "https:";
   return url.toString();
 }
 
