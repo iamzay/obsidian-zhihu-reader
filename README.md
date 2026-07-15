@@ -1,6 +1,6 @@
-# Zhihu Answers
+# Zhihu Reader
 
-在 Obsidian 中阅读知乎问题与回答的插件。目前是可运行的项目骨架，尚未实现完整阅读流程。
+在 Obsidian 中以原生阅读器浏览知乎问题与回答，并将值得保留的回答保存为 Markdown。
 
 完整的产品定位、功能需求和交互流程见 [产品需求文档](docs/PRODUCT.md)，已确认的方案 A 视觉与组件规范见 [UI 设计规范](docs/UI-DESIGN.md)。
 

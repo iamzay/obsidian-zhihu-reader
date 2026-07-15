@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { PersistedZhihuAuth } from "@/auth/types";
+import type { QuestionHistoryEntry } from "@/history/QuestionHistory";
 import {
   DEFAULT_PLUGIN_DATA,
   DEFAULT_PLUGIN_SETTINGS,
@@ -9,6 +10,7 @@ import {
   type PluginSettings,
   PluginSettingsSchema,
   PersistedZhihuAuthSchema,
+  QuestionHistoryEntrySchema,
 } from "@/settings/data";
 
 export interface PluginDataStorage {
@@ -70,6 +72,18 @@ export class PluginDataRepository {
     await this.save(data);
     return data;
   }
+
+  async saveHistory(
+    current: PluginData,
+    history: readonly QuestionHistoryEntry[],
+  ): Promise<PluginData> {
+    const data: PluginData = {
+      ...current,
+      history: z.array(QuestionHistoryEntrySchema).parse(history),
+    };
+    await this.save(data);
+    return data;
+  }
 }
 
 export class MemoryPluginDataStorage implements PluginDataStorage {
@@ -126,13 +140,6 @@ function recoverPluginData(raw: unknown): PluginDataLoadResult {
       DEFAULT_PLUGIN_SETTINGS.answerOrder,
       issues,
     ),
-    historyEnabled: recoverField(
-      "historyEnabled",
-      settingsRaw.historyEnabled,
-      z.boolean(),
-      DEFAULT_PLUGIN_SETTINGS.historyEnabled,
-      issues,
-    ),
     historyLimit: recoverField(
       "historyLimit",
       settingsRaw.historyLimit,
@@ -147,6 +154,41 @@ function recoverPluginData(raw: unknown): PluginDataLoadResult {
       DEFAULT_PLUGIN_SETTINGS.saveFolder,
       issues,
     ),
+    notePathTemplate: recoverField(
+      "notePathTemplate",
+      settingsRaw.notePathTemplate,
+      z.string().trim().min(1),
+      DEFAULT_PLUGIN_SETTINGS.notePathTemplate,
+      issues,
+    ),
+    openNoteAfterSave: recoverField(
+      "openNoteAfterSave",
+      settingsRaw.openNoteAfterSave,
+      z.boolean(),
+      DEFAULT_PLUGIN_SETTINGS.openNoteAfterSave,
+      issues,
+    ),
+    imageMode: recoverField(
+      "imageMode",
+      settingsRaw.imageMode,
+      z.enum(["remote", "vault"]),
+      DEFAULT_PLUGIN_SETTINGS.imageMode,
+      issues,
+    ),
+    attachmentLocation: recoverField(
+      "attachmentLocation",
+      settingsRaw.attachmentLocation,
+      z.enum(["obsidian", "custom"]),
+      DEFAULT_PLUGIN_SETTINGS.attachmentLocation,
+      issues,
+    ),
+    attachmentFolder: recoverField(
+      "attachmentFolder",
+      settingsRaw.attachmentFolder,
+      z.string().trim().min(1),
+      DEFAULT_PLUGIN_SETTINGS.attachmentFolder,
+      issues,
+    ),
   };
   const authResult = PersistedZhihuAuthSchema.safeParse(
     recordResult.data.auth,
@@ -157,9 +199,16 @@ function recoverPluginData(raw: unknown): PluginDataLoadResult {
   const auth = authResult.success
     ? authResult.data
     : structuredClone(DEFAULT_PLUGIN_DATA.auth);
+  const historyResult = z
+    .array(QuestionHistoryEntrySchema)
+    .safeParse(recordResult.data.history);
+  if (recordResult.data.history !== undefined && !historyResult.success) {
+    issues.push("history");
+  }
+  const history = historyResult.success ? historyResult.data : [];
 
   return {
-    data: { version: 1, settings, auth },
+    data: { version: 1, settings, auth, history },
     diagnostic:
       issues.length === 0
         ? null

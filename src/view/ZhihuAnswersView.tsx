@@ -2,8 +2,16 @@ import { StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 
-import type { AnswerOrder, ReaderSnapshot, ZhihuTarget } from "@/domain/zhihu";
+import type {
+  AnswerDocument,
+  AnswerOrder,
+  ReaderSnapshot,
+  ZhihuTarget,
+} from "@/domain/zhihu";
 import type { ZhihuAuthSnapshot } from "@/auth/types";
+import type {
+  QuestionHistoryEntry,
+} from "@/history/QuestionHistory";
 import { zhihuHtmlToMarkdown } from "@/markdown/toMarkdown";
 import {
   ReaderSession,
@@ -12,15 +20,24 @@ import {
 import type { ZhihuGateway } from "@/zhihu/gateway";
 import {
   ReaderScreen,
+  type AnswerSaveState,
   type PreparedAnswer,
   type ReaderScreenActions,
 } from "@/view/reader/ReaderScreen";
 
 export const VIEW_TYPE_ZHIHU_ANSWERS = "zhihu-answers-view";
+export const ZHIHU_READER_ICON = "book-open";
 
 export interface ZhihuAnswersViewActions {
   readonly openUrlModal: () => void;
   readonly openFromClipboard: () => void;
+  readonly recordHistory: (question: NonNullable<ReaderSnapshot["question"]>) => void;
+  readonly removeHistory: (questionId: string) => void;
+  readonly clearHistory: () => void;
+  readonly saveAnswer: (
+    answer: AnswerDocument,
+  ) => Promise<{ readonly status: "saved" | "cancelled"; readonly path?: string; readonly warnings?: readonly string[] }>;
+  readonly openNote: (path: string) => void;
 }
 
 export class ZhihuAnswersView extends ItemView {
@@ -30,6 +47,13 @@ export class ZhihuAnswersView extends ItemView {
   private snapshot: ReaderSnapshot;
   private authSnapshot: ZhihuAuthSnapshot;
   private previousAnswerId: string | null = null;
+  private historyEntries: readonly QuestionHistoryEntry[];
+  private isHistoryOpen = false;
+  private shouldRecordQuery = false;
+  private savingAnswerId: string | null = null;
+  private readonly savedPaths = new Map<string, string>();
+  private readonly saveWarnings = new Map<string, readonly string[]>();
+  private readonly saveErrors = new Map<string, string>();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -37,11 +61,13 @@ export class ZhihuAnswersView extends ItemView {
     optionsProvider: ReaderSessionOptionsProvider,
     private readonly actions: ZhihuAnswersViewActions,
     initialAuth: ZhihuAuthSnapshot,
+    initialHistory: readonly QuestionHistoryEntry[],
   ) {
     super(leaf);
     this.session = new ReaderSession(gateway, optionsProvider);
     this.snapshot = this.session.snapshot();
     this.authSnapshot = initialAuth;
+    this.historyEntries = initialHistory;
   }
 
   getViewType(): string {
@@ -49,11 +75,11 @@ export class ZhihuAnswersView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Zhihu Answers";
+    return "Zhihu Reader";
   }
 
   override getIcon(): string {
-    return "book-open-text";
+    return ZHIHU_READER_ICON;
   }
 
   override onOpen(): Promise<void> {
@@ -64,6 +90,14 @@ export class ZhihuAnswersView extends ItemView {
         this.previousAnswerId !== null && currentAnswerId !== this.previousAnswerId;
       this.previousAnswerId = currentAnswerId;
       this.snapshot = snapshot;
+      if (
+        this.shouldRecordQuery &&
+        snapshot.phase === "ready" &&
+        snapshot.question !== null
+      ) {
+        this.shouldRecordQuery = false;
+        this.actions.recordHistory(snapshot.question);
+      }
       this.render();
       if (shouldResetScroll) {
         window.requestAnimationFrame(() => {
@@ -87,12 +121,60 @@ export class ZhihuAnswersView extends ItemView {
   }
 
   async openTarget(target: ZhihuTarget): Promise<void> {
+    this.shouldRecordQuery = true;
     await this.session.open(target);
+  }
+
+  setHistoryEntries(entries: readonly QuestionHistoryEntry[]): void {
+    this.historyEntries = entries;
+    this.render();
+  }
+
+  openHistoryPopover(): void {
+    this.isHistoryOpen = true;
+    this.render();
   }
 
   setAuthSnapshot(snapshot: ZhihuAuthSnapshot): void {
     this.authSnapshot = snapshot;
     this.render();
+  }
+
+  hasCurrentAnswer(): boolean {
+    return this.snapshot.answers[this.snapshot.currentIndex] !== undefined;
+  }
+
+  async saveCurrentAnswer(): Promise<void> {
+    const answer = this.snapshot.answers[this.snapshot.currentIndex];
+    if (answer === undefined || this.savingAnswerId !== null) {
+      return;
+    }
+    const answerId = answer.id;
+    this.savingAnswerId = answerId;
+    this.saveErrors.delete(answerId);
+    this.render();
+    try {
+      const result = await this.actions.saveAnswer(answer);
+      if (result.status === "saved" && result.path !== undefined) {
+        this.savedPaths.set(answerId, result.path);
+        const failures = result.warnings?.length ?? 0;
+        if (failures > 0) {
+          this.saveWarnings.set(answerId, result.warnings ?? []);
+        } else {
+          this.saveWarnings.delete(answerId);
+        }
+      }
+    } catch (error: unknown) {
+      this.saveErrors.set(
+        answerId,
+        error instanceof Error ? error.message : "保存回答时发生未知错误。",
+      );
+    } finally {
+      if (this.savingAnswerId === answerId) {
+        this.savingAnswerId = null;
+      }
+      this.render();
+    }
   }
 
   private preparedAnswer(): PreparedAnswer | null {
@@ -143,10 +225,31 @@ export class ZhihuAnswersView extends ItemView {
       changeOrder: (order: AnswerOrder) => {
         void this.session.changeOrder(order);
       },
-      returnToAnchor: () => this.session.returnToAnchor(),
       retryNavigation: () => {
         void this.session.retryNavigation();
       },
+      toggleHistory: () => {
+        this.isHistoryOpen = !this.isHistoryOpen;
+        this.render();
+      },
+      closeHistory: () => {
+        this.isHistoryOpen = false;
+        this.render();
+      },
+      openHistoryEntry: (questionId: string) => {
+        this.isHistoryOpen = false;
+        void this.openTarget({ type: "question", questionId });
+      },
+      removeHistoryEntry: (questionId: string) => {
+        this.actions.removeHistory(questionId);
+      },
+      clearHistory: () => {
+        this.actions.clearHistory();
+      },
+      saveCurrentAnswer: () => {
+        void this.saveCurrentAnswer();
+      },
+      openNote: (path: string) => this.actions.openNote(path),
     };
   }
 
@@ -159,9 +262,34 @@ export class ZhihuAnswersView extends ItemView {
           preparedAnswer={this.preparedAnswer()}
           questionMarkdown={this.questionMarkdown()}
           auth={this.authSnapshot}
+          historyEntries={this.historyEntries}
+          isHistoryOpen={this.isHistoryOpen}
+          saveState={this.currentSaveState()}
           actions={this.readerActions()}
         />
       </StrictMode>,
     );
+  }
+
+  private currentSaveState(): AnswerSaveState {
+    const answerId = this.snapshot.answers[this.snapshot.currentIndex]?.id;
+    if (answerId === undefined) {
+      return { status: "idle" };
+    }
+    if (this.savingAnswerId === answerId) {
+      return { status: "saving" };
+    }
+    const path = this.savedPaths.get(answerId);
+    if (path !== undefined) {
+      return {
+        status: "saved",
+        path,
+        warnings: this.saveWarnings.get(answerId) ?? [],
+      };
+    }
+    const error = this.saveErrors.get(answerId);
+    return error === undefined
+      ? { status: "idle" }
+      : { status: "error", message: error };
   }
 }

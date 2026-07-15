@@ -63,7 +63,7 @@ export interface ReaderSnapshot {
   readonly question: QuestionSummary | null;
   readonly answers: readonly AnswerDocument[];
   readonly currentIndex: number;
-  readonly anchorAnswerId: string | null;
+  readonly initialAnswerId: string | null;
   readonly isLoadingNextPage: boolean;
   readonly isEnd: boolean;
   readonly errorMessage: string | null;

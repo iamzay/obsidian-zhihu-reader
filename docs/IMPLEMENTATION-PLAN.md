@@ -1,4 +1,4 @@
-# Zhihu Answers 实施任务拆分
+# Zhihu Reader 实施任务拆分
 
 ## 1. 拆分原则
 
@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | `ZhihuTargetParser` | `parse(input)` | URL 规范化、问题/回答识别、错误信息 |
 | `ZhihuGateway` | `getQuestion`、`getAnswer`、`getAnswerPage` | URL、请求头、Cookie、Zod、知乎错误格式 |
-| `ReaderSession` | `open`、`next`、`previous`、`returnToAnchor`、`snapshot` | 锚点队列、去重、分页、排序、并发和失败恢复 |
+| `ReaderSession` | `open`、`next`、`previous`、`snapshot` | 首项队列、去重、分页、排序、并发和失败恢复 |
 | `PluginDataRepository` | `load`、`save` | Zod 默认值、迁移、Obsidian `loadData/saveData` |
 | `QuestionHistory` | `record`、`list`、`remove`、`clear` | 问题 ID 去重、排序、上限和持久化 |
 | `AnswerNoteWriter` | `save` | 路径模板、frontmatter、冲突、原子写入和附件 |
@@ -40,7 +40,7 @@ flowchart LR
     T01 --> T03["ZA-03 公开回答阅读切片"]
     T02 --> T03
     T03 --> T04["ZA-04 问题回答队列"]
-    T04 --> T05["ZA-05 指定回答锚点队列"]
+    T04 --> T05["ZA-05 回答 URL 首项队列"]
     T05 --> T06["ZA-06 问题查询历史"]
     T05 --> T07["ZA-07 保存 Markdown"]
     T07 --> T08["ZA-08 富内容与图片本地化"]
@@ -62,7 +62,7 @@ flowchart LR
 
 - 定义 `ZhihuTarget`、`QuestionSummary`、`AnswerDocument`、`AnswerPage` 和 `ReaderSnapshot`。
 - ID 一律使用字符串，禁止在领域类型中使用 `number`。
-- 为问题详情、指定回答、问题 feed、空问题和异常响应准备脱敏 JSON fixtures。
+- 为问题详情、单篇回答、问题 feed、空问题和异常响应准备脱敏 JSON fixtures。
 - ID schema 接受数字字符串和安全整数；超过 JavaScript 安全整数范围的 ID 必须由接口以字符串形式提供，非安全 `number` 作为无效响应拒绝。
 - 调整现有 feed 规则：默认 `limit=6`，允许范围 `1–20`。
 - Zod schema 保持在 `ZhihuGateway` 实现内部；UI 使用转换后的领域类型。
@@ -111,7 +111,7 @@ tests/zhihu-schemas.test.ts
 实现内容：
 
 - 定义 `PluginDataSchema` 和 `PluginSettingsSchema`。
-- 设置默认值：feed 数量 6、综合排序、历史开启、历史上限 50、默认保存目录 `Zhihu Answers`。
+- 设置默认值：feed 数量 6、综合排序、历史上限 50、默认保存目录 `Zhihu Reader`。
 - 实现 `PluginDataRepository`，封装 Obsidian `loadData/saveData`。
 - 提供内存 adapter 供测试。
 - 创建 Obsidian `PluginSettingTab`，先实现阅读和保存基础设置。
@@ -127,7 +127,7 @@ tests/zhihu-schemas.test.ts
 
 ### ZA-03 公开回答阅读纵向切片
 
-目标：输入一个回答 URL 后，匿名用户能在方案 A UI 中读到该指定回答。
+目标：输入一个回答 URL 后，匿名用户能在方案 A UI 中读到 URL 对应回答。
 
 实现内容：
 
@@ -136,7 +136,7 @@ tests/zhihu-schemas.test.ts
 - `requestUrl` 放入生产 transport adapter；测试使用 fixture adapter。
 - 将回答 HTML 转成 Markdown，再使用 Obsidian `MarkdownRenderer` 渲染。
 - 正式实现方案 A 的 `ReaderToolbar`、`QuestionSummary`、`AnswerCard` 和基础 loading/error 状态。
-- 这一 task 暂不加载其他回答；导航区显示指定回答状态但翻页禁用。
+- 这一 task 暂不加载 feed 回答；导航区显示第一篇状态但翻页禁用。
 
 验收标准：
 
@@ -166,26 +166,26 @@ tests/zhihu-schemas.test.ts
 - 请求下一批失败时当前回答仍可阅读和向前切换。
 - 切换回答后正文滚动到顶部，问题折叠状态保持不变。
 
-### ZA-05 指定回答锚点队列
+### ZA-05 回答 URL 首项队列
 
 目标：回答 URL 与问题 URL 使用同一套阅读器和翻页体验。
 
 实现内容：
 
-- 回答 URL 先展示指定回答，不等待 feed。
-- 后台以该回答的问题 ID 获取一批其他回答。
-- 队列规则：`[指定回答, ...其他回答]`，指定回答不计入 `limit`。
-- 全分页去除与指定回答重复的回答 ID。
-- 实现“指定回答”“其他回答 N”“返回指定回答”。
-- 切换排序时固定锚点，只重新加载其他回答。
-- feed 失败只影响导航区，不替换指定回答正文。
+- 回答 URL 获取 URL 对应回答，并通过问题 ID 获取完整问题摘要，确保回答数和关注数等元数据完整。
+- 后台以该回答的问题 ID 获取一批 feed 回答。
+- 队列规则：`[URL 对应回答, ...feed 回答]`，首项不计入 `limit`。
+- 全分页去除与首项回答重复的回答 ID。
+- 问题 URL 和回答 URL 统一使用“第 N 篇”、上一回答和下一回答，不显示特殊徽标或返回首项入口。
+- 切换排序时固定首项，只重新加载后续 feed 回答。
+- feed 失败只影响导航区，不替换首项回答正文。
 
 验收标准：
 
-- 默认最多形成 1 篇指定回答 + 6 篇其他回答。
-- 指定回答可在 feed 任意页面出现而不重复展示。
-- 位置文案不暗示指定回答在知乎排序中的名次。
-- 锚点返回、上一回答、下一回答和分页测试通过。
+- 默认最多形成 1 篇 URL 对应回答 + 6 篇 feed 回答。
+- 首项回答可在 feed 任意页面出现而不重复展示。
+- 两类 URL 的回答卡片、位置文案和导航操作完全一致。
+- 上一回答、下一回答和分页测试通过。
 
 ### ZA-06 问题查询历史与 Popover
 
@@ -205,7 +205,7 @@ tests/zhihu-schemas.test.ts
 
 - 同一问题下查询多个回答只产生一条历史。
 - 阅读器内翻页不写历史。
-- 关闭历史开关后不再新增记录。
+- 历史始终记录成功的问题查询。
 - 点击外部、Escape 和焦点返回符合 UI 规范。
 - 删除历史不影响 Vault 笔记、附件或响应缓存。
 
@@ -216,7 +216,7 @@ tests/zhihu-schemas.test.ts
 实现内容：
 
 - 实现 `AnswerNoteWriter.save(answer, options)`。
-- 生成 frontmatter、问题标题、回答信息、正文和“我的笔记”。
+- 生成 frontmatter、问题标题、回答信息、正文和“我的笔记”；`created_at` 只写 `YYYY-MM-DD` 日期。
 - 实现目录和文件名模板、非法字符清理、目录创建。
 - 检测相同 `zhihu_answer_id`；文件存在时由 UI 询问打开或覆盖。
 - 保存成功后按钮变为“已保存”，点击打开文件。
@@ -228,7 +228,7 @@ tests/zhihu-schemas.test.ts
 - 保存文件停用插件后仍可正常阅读。
 - 不静默覆盖现有文件。
 - 写入失败不留下半成品。
-- 当前显示其他回答时，保存目标不是原始锚点回答。
+- 当前显示后续回答时，保存目标不是回答 URL 对应的首项回答。
 
 ### ZA-08 富内容转换与图片本地化
 
@@ -316,7 +316,7 @@ tests/zhihu-schemas.test.ts
 
 ### Milestone B：完整问题阅读器
 
-完成 ZA-04 至 ZA-05。问题和回答 URL 都能使用统一锚点队列翻页。
+完成 ZA-04 至 ZA-05。问题和回答 URL 都能使用统一阅读界面和队列翻页。
 
 ### Milestone C：知识沉淀闭环
 

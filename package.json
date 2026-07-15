@@ -1,5 +1,5 @@
 {
-  "name": "zhihu-answers",
+  "name": "zhihu-reader",
   "version": "0.1.0",
   "description": "An Obsidian plugin for reading Zhihu questions and answers.",
   "private": true,

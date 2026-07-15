@@ -21,6 +21,7 @@ const question: QuestionSummary = {
 };
 
 class FakeGateway implements ZhihuGateway {
+  readonly questionRequests: string[] = [];
   readonly pageRequests: Array<{
     questionId: string;
     options: FetchQuestionAnswersOptions;
@@ -34,7 +35,8 @@ class FakeGateway implements ZhihuGateway {
     private readonly anchor = answer("99"),
   ) {}
 
-  getQuestion(): Promise<QuestionSummary> {
+  getQuestion(questionId: string): Promise<QuestionSummary> {
+    this.questionRequests.push(questionId);
     return Promise.resolve(question);
   }
 
@@ -134,8 +136,32 @@ describe("ReaderSession question mode", () => {
   });
 });
 
-describe("ReaderSession anchor mode", () => {
-  it("shows the anchor before the feed resolves and removes duplicates", async () => {
+describe("ReaderSession answer URL mode", () => {
+  it("loads the complete question summary for an answer URL", async () => {
+    const incompleteQuestion = {
+      ...question,
+      answerCount: 0,
+      followerCount: 0,
+    };
+    const gateway = new FakeGateway(
+      [() => page(["1"], true)],
+      answer("99", incompleteQuestion),
+    );
+    const session = new ReaderSession(gateway, () => ({
+      feedLimit: 6,
+      order: "default",
+    }));
+
+    await session.open({ type: "answer", answerId: "99", questionId: "100" });
+
+    expect(gateway.questionRequests).toEqual(["100"]);
+    expect(session.snapshot().question).toMatchObject({
+      answerCount: 20,
+      followerCount: 30,
+    });
+  });
+
+  it("shows the requested answer first and removes feed duplicates", async () => {
     const pending = deferred<AnswerPage>();
     const gateway = new FakeGateway([() => pending.promise]);
     const session = new ReaderSession(gateway, () => ({
@@ -151,7 +177,7 @@ describe("ReaderSession anchor mode", () => {
     await until(() => session.snapshot().phase === "ready");
     expect(session.snapshot()).toMatchObject({
       currentIndex: 0,
-      anchorAnswerId: "99",
+      initialAnswerId: "99",
       isLoadingNextPage: true,
     });
     expect(session.snapshot().answers.map(({ id }) => id)).toEqual(["99"]);
@@ -169,7 +195,7 @@ describe("ReaderSession anchor mode", () => {
     expect(gateway.pageRequests[0]?.options.limit).toBe(6);
   });
 
-  it("returns to the anchor and keeps it fixed when sorting changes", async () => {
+  it("keeps the requested answer first when sorting changes", async () => {
     const gateway = new FakeGateway([
       () => page(["1", "2"], true),
       () => page(["7", "8"], true),
@@ -182,10 +208,9 @@ describe("ReaderSession anchor mode", () => {
     await session.open({ type: "answer", answerId: "99", questionId: "100" });
     await session.next();
     expect(session.snapshot().currentIndex).toBe(1);
-    session.returnToAnchor();
-    expect(session.snapshot().currentIndex).toBe(0);
 
     await session.changeOrder("updated");
+    expect(session.snapshot().currentIndex).toBe(0);
     expect(session.snapshot().answers.map(({ id }) => id)).toEqual([
       "99",
       "7",
@@ -194,7 +219,7 @@ describe("ReaderSession anchor mode", () => {
     expect(gateway.pageRequests[1]?.options.order).toBe("updated");
   });
 
-  it("keeps the anchor readable when background feed loading fails", async () => {
+  it("keeps the requested answer readable when background feed loading fails", async () => {
     const gateway = new FakeGateway([
       () => {
         throw new Error("feed unavailable");
@@ -215,7 +240,7 @@ describe("ReaderSession anchor mode", () => {
     expect(session.snapshot().answers.map(({ id }) => id)).toEqual(["99"]);
   });
 
-  it("deduplicates the anchor and prior answers across later pages", async () => {
+  it("deduplicates the requested and prior answers across later pages", async () => {
     const gateway = new FakeGateway([
       () => page(["1"], false, pageUrl(1)),
       () => page(["99", "1", "2"], true),
@@ -237,7 +262,10 @@ describe("ReaderSession anchor mode", () => {
   });
 });
 
-function answer(id: string): AnswerDocument {
+function answer(
+  id: string,
+  answerQuestion: QuestionSummary = question,
+): AnswerDocument {
   return {
     id,
     url: `https://www.zhihu.com/question/100/answer/${id}`,
@@ -246,7 +274,7 @@ function answer(id: string): AnswerDocument {
     excerpt: `回答 ${id}`,
     voteupCount: Number(id),
     commentCount: 0,
-    question,
+    question: answerQuestion,
   };
 }
 
@@ -256,7 +284,7 @@ function page(
   nextPageUrl: string | null = null,
 ): AnswerPage {
   return {
-    answers: ids.map(answer),
+    answers: ids.map((id) => answer(id)),
     isEnd,
     nextPageUrl,
     previousPageUrl: null,

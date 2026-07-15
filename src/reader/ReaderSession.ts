@@ -80,20 +80,6 @@ export class ReaderSession {
     return operation;
   }
 
-  returnToAnchor(): void {
-    if (this.state.anchorAnswerId === null) {
-      return;
-    }
-    const anchorIndex = this.state.answers.findIndex(
-      ({ id }) => id === this.state.anchorAnswerId,
-    );
-    if (anchorIndex < 0 || anchorIndex === this.state.currentIndex) {
-      return;
-    }
-    this.state = { ...this.state, currentIndex: anchorIndex };
-    this.emit();
-  }
-
   async changeOrder(order: AnswerOrder): Promise<void> {
     if (order === this.state.order || this.state.target === null) {
       return;
@@ -101,21 +87,23 @@ export class ReaderSession {
 
     const generation = ++this.generation;
     const target = this.state.target;
-    const anchor =
-      this.state.anchorAnswerId === null
+    const initialAnswer =
+      this.state.initialAnswerId === null
         ? null
-        : this.state.answers.find(({ id }) => id === this.state.anchorAnswerId) ??
+        : this.state.answers.find(({ id }) => id === this.state.initialAnswerId) ??
           null;
     this.nextPageUrl = null;
     this.hasLoadedFirstPage = false;
     this.pageRequest = null;
     this.nextOperation = null;
-    this.seenAnswerIds = new Set(anchor === null ? [] : [anchor.id]);
+    this.seenAnswerIds = new Set(
+      initialAnswer === null ? [] : [initialAnswer.id],
+    );
 
-    if (target.type === "answer" && anchor !== null) {
+    if (target.type === "answer" && initialAnswer !== null) {
       this.state = {
         ...this.state,
-        answers: [anchor],
+        answers: [initialAnswer],
         currentIndex: 0,
         order,
         isEnd: false,
@@ -123,7 +111,7 @@ export class ReaderSession {
         navigationError: null,
       };
       this.emit();
-      await this.loadPage(anchor.question.id, generation, false);
+      await this.loadPage(initialAnswer.question.id, generation, false);
       return;
     }
     if (target.type !== "question") {
@@ -208,6 +196,7 @@ export class ReaderSession {
   ): Promise<void> {
     try {
       const answer = await this.gateway.getAnswer(answerId);
+      const question = await this.gateway.getQuestion(answer.question.id);
       if (!this.isCurrent(generation)) {
         return;
       }
@@ -215,14 +204,14 @@ export class ReaderSession {
       this.state = {
         ...this.state,
         phase: "ready",
-        question: answer.question,
+        question,
         answers: [answer],
         currentIndex: 0,
-        anchorAnswerId: answer.id,
+        initialAnswerId: answer.id,
         isLoadingNextPage: true,
       };
       this.emit();
-      await this.loadPage(answer.question.id, generation, false, options);
+      await this.loadPage(question.id, generation, false, options);
     } catch (error: unknown) {
       if (!this.isCurrent(generation)) {
         return;
@@ -416,7 +405,7 @@ function emptySnapshot(order: AnswerOrder): ReaderSnapshot {
     question: null,
     answers: [],
     currentIndex: -1,
-    anchorAnswerId: null,
+    initialAnswerId: null,
     isLoadingNextPage: false,
     isEnd: false,
     errorMessage: null,

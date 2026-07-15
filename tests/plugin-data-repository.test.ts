@@ -29,9 +29,13 @@ describe("PluginDataRepository", () => {
     expect(result.data.settings).toEqual({
       feedLimit: 12,
       answerOrder: "default",
-      historyEnabled: true,
       historyLimit: 50,
-      saveFolder: "Zhihu Answers",
+      saveFolder: "Zhihu Reader",
+      notePathTemplate: "{问题标题}/{作者名} - {回答ID}.md",
+      openNoteAfterSave: true,
+      imageMode: "remote",
+      attachmentLocation: "obsidian",
+      attachmentFolder: "Zhihu Reader/attachments",
     });
   });
 
@@ -99,6 +103,34 @@ describe("PluginDataRepository", () => {
 
     expect(saved.auth).toEqual(current.auth);
     expect((await repository.load()).data.auth).toEqual(current.auth);
+  });
+
+  it("persists history without replacing settings or authentication", async () => {
+    const storage = new MemoryPluginDataStorage();
+    const repository = new PluginDataRepository(storage);
+    const current = {
+      ...DEFAULT_PLUGIN_DATA,
+      settings: { ...DEFAULT_PLUGIN_DATA.settings, feedLimit: 9 },
+      auth: {
+        cookies: { session_cookie: "private-value" },
+        profile: null,
+        verifiedAt: 100,
+      },
+    };
+
+    const saved = await repository.saveHistory(current, [
+      {
+        questionId: "100",
+        questionTitle: "测试问题",
+        lastQueriedAt: "2026-07-15T08:00:00.000Z",
+      },
+    ]);
+
+    expect(saved.settings.feedLimit).toBe(9);
+    expect(saved.auth).toEqual(current.auth);
+    await expect(repository.load()).resolves.toMatchObject({
+      data: { history: [{ questionId: "100", questionTitle: "测试问题" }] },
+    });
   });
 
   it("rejects an invalid feed limit when saving", async () => {

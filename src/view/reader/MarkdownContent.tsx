@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { type App, MarkdownRenderChild, MarkdownRenderer } from "obsidian";
 
+import { startMarkdownRender } from "@/view/reader/MarkdownRenderLifecycle";
+
 export function MarkdownContent({
   app,
   markdown,
@@ -17,23 +19,30 @@ export function MarkdownContent({
       return undefined;
     }
 
-    let active = true;
     setRenderError(null);
-    container.empty();
-    const renderChild = new MarkdownRenderChild(container);
-    renderChild.load();
-    void MarkdownRenderer.render(app, markdown, container, "", renderChild).catch(
+    let renderChild: MarkdownRenderChild | null = null;
+    const handle = startMarkdownRender(
+      container,
+      async (host) => {
+        const renderHost = host as HTMLElement;
+        renderChild = new MarkdownRenderChild(renderHost);
+        renderChild.load();
+        await MarkdownRenderer.render(
+          app,
+          markdown,
+          renderHost,
+          "",
+          renderChild,
+        );
+      },
       () => {
-        if (active) {
-          setRenderError("Obsidian 无法渲染转换后的 Markdown，请在浏览器中阅读原文。");
-        }
+        setRenderError("Obsidian 无法渲染转换后的 Markdown，请在浏览器中阅读原文。");
       },
     );
 
     return () => {
-      active = false;
-      renderChild.unload();
-      container.empty();
+      renderChild?.unload();
+      handle.dispose();
     };
   }, [app, markdown]);
 

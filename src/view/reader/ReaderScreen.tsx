@@ -9,6 +9,11 @@ import type {
   ZhihuTarget,
 } from "@/domain/zhihu";
 import type { ZhihuAuthSnapshot } from "@/auth/types";
+import type { QuestionHistoryEntry } from "@/history/QuestionHistory";
+import {
+  HistoryPopover,
+  type HistoryPopoverActions,
+} from "@/view/reader/HistoryPopover";
 import { MarkdownContent } from "@/view/reader/MarkdownContent";
 
 export interface PreparedAnswer {
@@ -17,15 +22,26 @@ export interface PreparedAnswer {
   readonly conversionError: string | null;
 }
 
-export interface ReaderScreenActions {
+export type AnswerSaveState =
+  | { readonly status: "idle" }
+  | { readonly status: "saving" }
+  | {
+      readonly status: "saved";
+      readonly path: string;
+      readonly warnings: readonly string[];
+    }
+  | { readonly status: "error"; readonly message: string };
+
+export interface ReaderScreenActions extends HistoryPopoverActions {
   readonly openUrlModal: () => void;
   readonly openFromClipboard: () => void;
   readonly retry: () => void;
   readonly previous: () => void;
   readonly next: () => void;
   readonly changeOrder: (order: AnswerOrder) => void;
-  readonly returnToAnchor: () => void;
   readonly retryNavigation: () => void;
+  readonly saveCurrentAnswer: () => void;
+  readonly openNote: (path: string) => void;
 }
 
 export function ReaderScreen({
@@ -34,6 +50,9 @@ export function ReaderScreen({
   preparedAnswer,
   questionMarkdown,
   auth,
+  historyEntries,
+  isHistoryOpen,
+  saveState,
   actions,
 }: {
   readonly app: App;
@@ -41,6 +60,9 @@ export function ReaderScreen({
   readonly preparedAnswer: PreparedAnswer | null;
   readonly questionMarkdown: string | null;
   readonly auth: ZhihuAuthSnapshot;
+  readonly historyEntries: readonly QuestionHistoryEntry[];
+  readonly isHistoryOpen: boolean;
+  readonly saveState: AnswerSaveState;
   readonly actions: ReaderScreenActions;
 }): React.JSX.Element {
   return (
@@ -50,6 +72,9 @@ export function ReaderScreen({
         onOpenUrl={actions.openUrlModal}
         onRefresh={actions.retry}
         canRefresh={snapshot.target !== null && snapshot.phase !== "loading"}
+        historyEntries={historyEntries}
+        isHistoryOpen={isHistoryOpen}
+        historyActions={actions}
       />
       {snapshot.phase === "idle" && (
         <EmptyReaderState
@@ -71,6 +96,7 @@ export function ReaderScreen({
           snapshot={snapshot}
           preparedAnswer={preparedAnswer}
           questionMarkdown={questionMarkdown}
+          saveState={saveState}
           actions={actions}
         />
       )}
@@ -83,11 +109,17 @@ function ReaderToolbar({
   onOpenUrl,
   onRefresh,
   canRefresh,
+  historyEntries,
+  isHistoryOpen,
+  historyActions,
 }: {
   readonly auth: ZhihuAuthSnapshot;
   readonly onOpenUrl: () => void;
   readonly onRefresh: () => void;
   readonly canRefresh: boolean;
+  readonly historyEntries: readonly QuestionHistoryEntry[];
+  readonly isHistoryOpen: boolean;
+  readonly historyActions: HistoryPopoverActions;
 }): React.JSX.Element {
   return (
     <header className="zhihu-reader-toolbar">
@@ -96,7 +128,7 @@ function ReaderToolbar({
           知
         </span>
         <span>
-          <strong>Zhihu Answers</strong>
+          <strong>Zhihu Reader</strong>
           <small>专注阅读</small>
         </span>
       </div>
@@ -104,9 +136,11 @@ function ReaderToolbar({
         <button type="button" onClick={onOpenUrl} aria-label="打开知乎链接">
           打开链接
         </button>
-        <button type="button" disabled title="将在 ZA-06 启用">
-          历史列表
-        </button>
+        <HistoryPopover
+          entries={historyEntries}
+          isOpen={isHistoryOpen}
+          actions={historyActions}
+        />
         <button type="button" onClick={onRefresh} disabled={!canRefresh}>
           刷新
         </button>
@@ -130,7 +164,7 @@ function EmptyReaderState({
       <div className="zhihu-answers__mark" aria-hidden="true">
         知
       </div>
-      <h2>Zhihu Answers</h2>
+      <h2>Zhihu Reader</h2>
       <p>输入知乎问题或回答链接开始阅读</p>
       <div className="zhihu-answers__empty-actions">
         <button className="mod-cta" type="button" onClick={onOpenUrl}>
@@ -190,12 +224,14 @@ function ReaderReadyState({
   preparedAnswer,
   questionMarkdown,
   actions,
+  saveState,
 }: {
   readonly app: App;
   readonly snapshot: ReaderSnapshot;
   readonly preparedAnswer: PreparedAnswer | null;
   readonly questionMarkdown: string | null;
   readonly actions: ReaderScreenActions;
+  readonly saveState: AnswerSaveState;
 }): React.JSX.Element {
   return (
     <div className="zhihu-reader-shell">
@@ -213,7 +249,9 @@ function ReaderReadyState({
         <AnswerCard
           app={app}
           prepared={preparedAnswer}
-          isAnchor={preparedAnswer.answer.id === snapshot.anchorAnswerId}
+          saveState={saveState}
+          onSave={actions.saveCurrentAnswer}
+          onOpenNote={actions.openNote}
         />
       )}
       <AnswerNavigation snapshot={snapshot} actions={actions} />
@@ -266,11 +304,15 @@ function QuestionSummaryCard({
 function AnswerCard({
   app,
   prepared,
-  isAnchor,
+  saveState,
+  onSave,
+  onOpenNote,
 }: {
   readonly app: App;
   readonly prepared: PreparedAnswer;
-  readonly isAnchor: boolean;
+  readonly saveState: AnswerSaveState;
+  readonly onSave: () => void;
+  readonly onOpenNote: (path: string) => void;
 }): React.JSX.Element {
   const { answer, markdown, conversionError } = prepared;
   return (
@@ -291,7 +333,6 @@ function AnswerCard({
           <span>{answer.voteupCount} 赞同</span>
           <span>{answer.commentCount} 评论</span>
         </div>
-        {isAnchor && <span className="zhihu-answer-card__anchor">指定回答</span>}
       </header>
 
       <section className="zhihu-answer-card__content">
@@ -314,11 +355,43 @@ function AnswerCard({
           <button type="button" onClick={() => openExternal(answer.url)}>
             在浏览器打开
           </button>
-          <button type="button" disabled title="将在 ZA-07 启用">
-            保存回答
-          </button>
+          {saveState.status === "saved" ? (
+            <button
+              className="zhihu-answer-card__saved"
+              type="button"
+              onClick={() => onOpenNote(saveState.path)}
+              title="打开已保存笔记"
+            >
+              已保存
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saveState.status === "saving"}
+            >
+              {saveState.status === "saving" ? "保存中…" : "保存回答"}
+            </button>
+          )}
         </div>
       </footer>
+      {saveState.status === "error" && (
+        <p className="zhihu-answer-card__save-feedback is-error" role="alert">
+          {saveState.message}
+        </p>
+      )}
+      {saveState.status === "saved" && saveState.warnings.length > 0 && (
+        <div className="zhihu-answer-card__save-feedback" role="status">
+          <p>
+            笔记已保存；{saveState.warnings.length} 张图片下载失败，已保留远程链接：
+          </p>
+          <ul>
+            {saveState.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </article>
   );
 }
@@ -333,15 +406,9 @@ function AnswerNavigation({
   const current = snapshot.answers[snapshot.currentIndex];
   const hasQueuedNext = snapshot.currentIndex + 1 < snapshot.answers.length;
   const canNext = current !== undefined && (hasQueuedNext || !snapshot.isEnd);
-  const anchorMode = snapshot.anchorAnswerId !== null;
-  const atAnchor = current?.id === snapshot.anchorAnswerId;
-  const position = anchorMode
-    ? atAnchor
-      ? "指定回答"
-      : `其他回答 ${snapshot.currentIndex} / ${Math.max(0, snapshot.answers.length - 1)}`
-    : current === undefined
-      ? "暂无回答"
-      : `第 ${snapshot.currentIndex + 1} 篇`;
+  const position = current === undefined
+    ? "暂无回答"
+    : `第 ${snapshot.currentIndex + 1} 篇`;
 
   return (
     <section className="zhihu-answer-navigation-wrap">
@@ -377,15 +444,6 @@ function AnswerNavigation({
           {snapshot.isLoadingNextPage ? "加载中…" : "下一回答 →"}
         </button>
       </nav>
-      {anchorMode && !atAnchor && (
-        <button
-          className="zhihu-answer-navigation__anchor"
-          type="button"
-          onClick={actions.returnToAnchor}
-        >
-          返回指定回答
-        </button>
-      )}
       {snapshot.navigationError !== null && (
         <div className="zhihu-answer-navigation__error" role="alert">
           <span>{snapshot.navigationError}</span>

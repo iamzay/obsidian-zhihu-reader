@@ -10,7 +10,7 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
   override display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Zhihu Answers" });
+    containerEl.createEl("h2", { text: "Zhihu Reader" });
 
     const diagnostic = this.zhihuPlugin.getDataDiagnostic();
     if (diagnostic !== null) {
@@ -56,15 +56,6 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("记录查询历史")
-      .setDesc("只记录查询过的问题 ID、标题和时间，不创建 Markdown 文件。")
-      .addToggle((toggle) =>
-        toggle.setValue(settings.historyEnabled).onChange((value) => {
-          void this.zhihuPlugin.updateSettings({ historyEnabled: value });
-        }),
-      );
-
-    new Setting(containerEl)
       .setName("历史条目上限")
       .setDesc("最多保留的问题查询记录数量。")
       .addSlider((slider) =>
@@ -80,10 +71,10 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
     containerEl.createEl("h3", { text: "保存" });
     new Setting(containerEl)
       .setName("回答保存目录")
-      .setDesc("相对于当前 Vault 根目录。保存功能将在 ZA-07 启用。")
+      .setDesc("相对于当前 Vault 根目录。")
       .addText((text) =>
         text
-          .setPlaceholder("Zhihu Answers")
+          .setPlaceholder("Zhihu Reader")
           .setValue(settings.saveFolder)
           .onChange((value) => {
             const saveFolder = value.trim();
@@ -92,6 +83,74 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
             }
           }),
       );
+
+    new Setting(containerEl)
+      .setName("文件路径模板")
+      .setDesc("支持 {问题标题}、{作者名}、{回答ID} 和 {问题ID}。")
+      .addText((text) =>
+        text.setValue(settings.notePathTemplate).onChange((value) => {
+          const notePathTemplate = value.trim();
+          if (notePathTemplate.length > 0) {
+            void this.zhihuPlugin.updateSettings({ notePathTemplate });
+          }
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("保存后自动打开笔记")
+      .addToggle((toggle) =>
+        toggle.setValue(settings.openNoteAfterSave).onChange((value) => {
+          void this.zhihuPlugin.updateSettings({ openNoteAfterSave: value });
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("是否下载图片到 Vault")
+      .setDesc("临时阅读始终使用远程图片；只有保存回答时才会下载附件。")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(settings.imageMode === "vault")
+          .onChange((shouldDownload) => {
+            void this.zhihuPlugin
+              .updateSettings({
+                imageMode: shouldDownload ? "vault" : "remote",
+              })
+              .then(() => this.display());
+          }),
+      );
+
+    if (settings.imageMode === "vault") {
+      new Setting(containerEl)
+        .setName("附件位置")
+        .addDropdown((dropdown) =>
+          dropdown
+            .addOption("obsidian", "遵循 Obsidian 附件设置")
+            .addOption("custom", "使用独立目录")
+            .setValue(settings.attachmentLocation)
+            .onChange((value) => {
+              if (value === "obsidian" || value === "custom") {
+                void this.zhihuPlugin
+                  .updateSettings({ attachmentLocation: value })
+                  .then(() => this.display());
+              }
+            }),
+        );
+      if (settings.attachmentLocation === "custom") {
+        new Setting(containerEl)
+          .setName("附件目录")
+          .setDesc(
+            "相对于 Vault 根目录；支持 {问题标题}、{作者名}、{回答ID} 和 {问题ID}。",
+          )
+          .addText((text) =>
+            text.setValue(settings.attachmentFolder).onChange((value) => {
+              const attachmentFolder = value.trim();
+              if (attachmentFolder.length > 0) {
+                void this.zhihuPlugin.updateSettings({ attachmentFolder });
+              }
+            }),
+          );
+      }
+    }
   }
 
   private renderAuthSettings(): void {

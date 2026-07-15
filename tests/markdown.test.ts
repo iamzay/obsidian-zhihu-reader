@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { zhihuHtmlToMarkdown } from "@/markdown/toMarkdown";
@@ -43,5 +45,53 @@ describe("zhihuHtmlToMarkdown", () => {
     );
 
     expect(markdown).toBe("![示例](https://pic1.zhimg.com/example.png)");
+  });
+
+  it("converts Zhihu rich content into Obsidian Markdown", () => {
+    const markdown = zhihuHtmlToMarkdown(
+      readFileSync(
+        new URL("./fixtures/zhihu/rich-content.html", import.meta.url),
+        "utf8",
+      ),
+    );
+
+    expect(markdown).toContain("行内公式 $a^2+b^2$");
+    expect(markdown).toContain("$x+y$");
+    expect(markdown).toContain("~~旧结论~~、==重点==");
+    expect(markdown).toContain("$$\nE=mc^2\n$$");
+    expect(markdown).toContain("```ts\nconst value = 1;\n```");
+    expect(markdown).toContain("| 名称 | 值 |");
+    expect(markdown).toContain("| --- | --- |");
+    expect(markdown).toContain("参考[^1]");
+    expect(markdown).toContain("[^1]: 参考资料 [来源](https://example.com/ref)");
+    expect(markdown).toContain("![](https://pic.example/image.jpg)");
+    expect(markdown).toContain("*图片说明*");
+  });
+
+  it("drops unsafe links and tracking controls", () => {
+    const markdown = zhihuHtmlToMarkdown(
+      `<p><a href="javascript:alert(1)">不安全链接</a><button>跟踪操作</button></p>`,
+    );
+
+    expect(markdown).toBe("不安全链接");
+  });
+
+  it("canonicalizes image query parameters and removes tracking case-insensitively", () => {
+    const markdown = zhihuHtmlToMarkdown(
+      `<img src="https://pic.example/image.jpg?z=2&amp;NeedBackground=1&amp;a=1&amp;UTM_Source=zhihu" />`,
+    );
+
+    expect(markdown).toBe(
+      "![](https://pic.example/image.jpg?a=1&z=2)",
+    );
+  });
+
+  it("creates a valid Markdown header for tables without th elements", () => {
+    const markdown = zhihuHtmlToMarkdown(
+      "<table><tbody><tr><td>名称</td><td>值</td></tr><tr><td>A</td><td>1</td></tr></tbody></table>",
+    );
+
+    expect(markdown).toContain("| 名称 | 值 |");
+    expect(markdown).toContain("| --- | --- |");
   });
 });
