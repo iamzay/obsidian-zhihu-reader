@@ -187,6 +187,14 @@ export default class ZhihuAnswersPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "search-zhihu-answers",
+      name: "搜索知乎回答",
+      callback: () => {
+        void this.showSearch();
+      },
+    });
+
+    this.addCommand({
       id: "open-zhihu-content-from-clipboard",
       name: "从剪贴板打开",
       callback: () => {
@@ -412,6 +420,16 @@ export default class ZhihuAnswersPlugin extends Plugin {
     )[0];
     if (leaf?.view instanceof ZhihuAnswersView) {
       leaf.view.openDailyHotListPopover();
+    }
+  }
+
+  private async showSearch(): Promise<void> {
+    await this.activateView();
+    const leaf = this.app.workspace.getLeavesOfType(
+      VIEW_TYPE_ZHIHU_ANSWERS,
+    )[0];
+    if (leaf?.view instanceof ZhihuAnswersView) {
+      leaf.view.openSearchPopover();
     }
   }
 }

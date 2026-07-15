@@ -4,6 +4,7 @@ import type {
   AuthorAnswerPage,
   CommentPage,
   QuestionSummary,
+  SearchAnswerPage,
   ZhihuHotListItem,
 } from "@/domain/zhihu";
 import {
@@ -13,6 +14,7 @@ import {
   parseHotListResponse,
   parseQuestionResponse,
   parseQuestionFeedsResponse,
+  parseSearchAnswersResponse,
   ZhihuApiResponseError,
   ZhihuResponseValidationError,
 } from "@/zhihu/schemas";
@@ -29,10 +31,12 @@ import {
   buildHotListUrl,
   buildQuestionFeedsUrl,
   buildQuestionUrl,
+  buildSearchAnswersUrl,
   type FetchQuestionAnswersOptions,
   type FetchAuthorAnswersOptions,
   type FetchAnswerCommentsOptions,
   type FetchChildCommentsOptions,
+  type FetchSearchAnswersOptions,
 } from "@/zhihu/urls";
 
 const ZHIHU_WEB_ORIGIN = "https://www.zhihu.com";
@@ -66,6 +70,10 @@ export interface ZhihuGateway {
     commentId: string,
     options?: FetchChildCommentsOptions,
   ): Promise<CommentPage>;
+  getSearchAnswerPage(
+    query: string,
+    options?: FetchSearchAnswersOptions,
+  ): Promise<SearchAnswerPage>;
   getAuthorAnswerPage(
     authorIdentifier: string,
     options?: FetchAuthorAnswersOptions,
@@ -140,6 +148,21 @@ export class HttpZhihuGateway implements ZhihuGateway {
     );
     try {
       return parseCommentsResponse(text);
+    } catch (error: unknown) {
+      throw responseError(error);
+    }
+  }
+
+  async getSearchAnswerPage(
+    query: string,
+    options: FetchSearchAnswersOptions = {},
+  ): Promise<SearchAnswerPage> {
+    const text = await this.request(
+      buildSearchAnswersUrl(query, options),
+      `${ZHIHU_WEB_ORIGIN}/search?q=${encodeURIComponent(query)}&type=content`,
+    );
+    try {
+      return parseSearchAnswersResponse(text);
     } catch (error: unknown) {
       throw responseError(error);
     }

@@ -164,7 +164,16 @@ Popover 不显示回答 ID、作者、回答位置或回答预览。
 - 未登录且接口拒绝访问时，显示“请先在插件设置中登录”和重试入口。
 - 点击外部或按 Escape 关闭，不改变当前回答；与 HistoryPopover 不同时打开。
 
-### 3.7 ZhihuUrlModal
+### 3.8 SearchPopover
+
+- 位于工具栏“打开链接”之后，容器沿用热榜/历史 Popover 的边框、圆角和阴影，桌面端宽度最大约 `520px`。
+- 标题栏说明当前搜索范围为知乎回答；下方使用单行搜索框和强调色提交按钮，Enter 提交、Escape 关闭。
+- 每条结果以问题标题为主信息、回答摘要为次信息，作者、赞同数和评论数作为弱化元信息；标题和摘要最多两行。
+- 首屏 20 条，列表接近底部自动分页，并保留显式“加载更多”按钮。
+- 加载、空结果、登录要求、首次错误、分页错误和结束状态均在 Popover 内展示，不替换当前回答。
+- 点击结果关闭 Popover 并进入回答阅读；搜索、热榜和历史三者互斥。
+
+### 3.9 ZhihuUrlModal
 
 通过命令“打开知乎内容”触发：
 
@@ -176,7 +185,7 @@ Popover 不显示回答 ID、作者、回答位置或回答预览。
 - Enter 提交，Escape 关闭。
 - URL 无效时保留输入并在输入框下方显示错误。
 
-### 3.8 空白阅读器
+### 3.10 空白阅读器
 
 通过 Ribbon 打开但尚未查询内容时，使用方案 A 的居中空状态：
 
@@ -232,6 +241,7 @@ Popover 不显示回答 ID、作者、回答位置或回答预览。
 - 回答导航允许在工具栏第二行内部换行，上一回答和下一回答仍保留文字。
 - HistoryPopover 宽度不超过视口减 `24px`。
 - DailyHotPopover 宽度不超过视口减 `24px`，缩略图可隐藏以保证标题可读。
+- SearchPopover 宽度不超过视口减 `24px`，搜索框和按钮保持同一行。
 - 作者回答 Popover 从头像向右展开，宽度不超过可视区域；窄屏仍可通过点击头像打开。
 - 评论抽屉改为底部样式，宽度 `100%`，高度不超过视口的 `88%`。
 
@@ -251,6 +261,7 @@ Popover 不显示回答 ID、作者、回答位置或回答预览。
 - 所有图标按钮必须有 `aria-label` 和 tooltip。
 - HistoryPopover 使用焦点管理：打开后焦点进入列表，关闭后返回“历史列表”按钮。
 - DailyHotPopover 使用相同的焦点管理；刷新、重试和榜单条目均可由键盘访问。
+- SearchPopover 打开后焦点进入搜索框；Enter 提交，Escape 或点击外部关闭并返回触发按钮。
 - 作者头像可聚焦并通过 Enter、Space 或点击打开回答列表；Escape 关闭后焦点回到头像。
 - 评论抽屉使用 `role="dialog"` 和 `aria-modal="true"`；Tab 焦点不离开抽屉，Escape 关闭后返回评论入口。
 - URL Modal 打开后自动聚焦输入框并形成焦点陷阱。
@@ -267,6 +278,7 @@ ZhihuAnswersView
 └── ZhihuAnswersApp
     ├── ReaderToolbar
     │   ├── AnswerToolbarNavigation
+    │   ├── SearchPopover
     │   ├── DailyHotPopover
     │   └── HistoryPopover
     ├── EmptyReaderState

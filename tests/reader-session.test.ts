@@ -53,6 +53,10 @@ class FakeGateway implements ZhihuGateway {
     return Promise.reject(new Error("Not used"));
   }
 
+  getSearchAnswerPage(): Promise<never> {
+    return Promise.reject(new Error("Not used"));
+  }
+
   getHotList(): Promise<readonly never[]> {
     return Promise.resolve([]);
   }

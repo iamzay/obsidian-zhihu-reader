@@ -13,6 +13,7 @@ import type { AuthorAnswerListSnapshot } from "@/author/AuthorAnswerList";
 import type { AnswerCommentListSnapshot } from "@/comments/AnswerCommentList";
 import type { DailyHotListSnapshot } from "@/hotlist/DailyHotList";
 import type { QuestionHistoryEntry } from "@/history/QuestionHistory";
+import type { ZhihuAnswerSearchSnapshot } from "@/search/ZhihuAnswerSearch";
 import {
   AnswerCommentsDialog,
   type AnswerCommentsDialogActions,
@@ -30,6 +31,10 @@ import {
   type HistoryPopoverActions,
 } from "@/view/reader/HistoryPopover";
 import { MarkdownContent } from "@/view/reader/MarkdownContent";
+import {
+  SearchPopover,
+  type SearchPopoverActions,
+} from "@/view/reader/SearchPopover";
 
 export interface PreparedAnswer {
   readonly answer: AnswerDocument;
@@ -51,7 +56,8 @@ export interface ReaderScreenActions
   extends HistoryPopoverActions,
     DailyHotPopoverActions,
     AuthorAnswersPopoverActions,
-    AnswerCommentsDialogActions {
+    AnswerCommentsDialogActions,
+    SearchPopoverActions {
   readonly openUrlModal: () => void;
   readonly openFromClipboard: () => void;
   readonly retry: () => void;
@@ -76,6 +82,8 @@ export function ReaderScreen({
   authorAnswerList,
   answerCommentList,
   isCommentsOpen,
+  search,
+  isSearchOpen,
   isDailyHotListOpen,
   saveState,
   actions,
@@ -91,6 +99,8 @@ export function ReaderScreen({
   readonly authorAnswerList: AuthorAnswerListSnapshot;
   readonly answerCommentList: AnswerCommentListSnapshot;
   readonly isCommentsOpen: boolean;
+  readonly search: ZhihuAnswerSearchSnapshot;
+  readonly isSearchOpen: boolean;
   readonly isDailyHotListOpen: boolean;
   readonly saveState: AnswerSaveState;
   readonly actions: ReaderScreenActions;
@@ -110,6 +120,9 @@ export function ReaderScreen({
         dailyHotActions={actions}
         snapshot={snapshot}
         answerActions={actions}
+        search={search}
+        isSearchOpen={isSearchOpen}
+        searchActions={actions}
       />
       {snapshot.phase === "idle" && (
         <EmptyReaderState
@@ -155,6 +168,9 @@ function ReaderToolbar({
   dailyHotActions,
   snapshot,
   answerActions,
+  search,
+  isSearchOpen,
+  searchActions,
 }: {
   readonly auth: ZhihuAuthSnapshot;
   readonly onOpenUrl: () => void;
@@ -168,6 +184,9 @@ function ReaderToolbar({
   readonly dailyHotActions: DailyHotPopoverActions;
   readonly snapshot: ReaderSnapshot;
   readonly answerActions: ReaderScreenActions;
+  readonly search: ZhihuAnswerSearchSnapshot;
+  readonly isSearchOpen: boolean;
+  readonly searchActions: SearchPopoverActions;
 }): React.JSX.Element {
   return (
     <header className="zhihu-reader-toolbar">
@@ -184,6 +203,11 @@ function ReaderToolbar({
         <button type="button" onClick={onOpenUrl} aria-label="打开知乎链接">
           打开链接
         </button>
+        <SearchPopover
+          snapshot={search}
+          isOpen={isSearchOpen}
+          actions={searchActions}
+        />
         <DailyHotPopover
           snapshot={dailyHotList}
           isOpen={isDailyHotListOpen}

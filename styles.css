@@ -113,13 +113,15 @@
 }
 
 .zhihu-history-popover-anchor,
-.zhihu-hot-popover-anchor {
+.zhihu-hot-popover-anchor,
+.zhihu-search-popover-anchor {
   position: relative;
 }
 
 .zhihu-hot-popover,
 .zhihu-history-popover,
-.zhihu-author-answers-popover {
+.zhihu-author-answers-popover,
+.zhihu-search-popover {
   position: absolute;
   z-index: var(--layer-popover);
   top: calc(100% + var(--size-4-2));
@@ -137,7 +139,8 @@
 
 .zhihu-hot-popover > header,
 .zhihu-history-popover > header,
-.zhihu-author-answers-popover > header {
+.zhihu-author-answers-popover > header,
+.zhihu-search-popover > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -148,7 +151,8 @@
 
 .zhihu-hot-popover > header > div,
 .zhihu-history-popover > header > div,
-.zhihu-author-answers-popover > header > div {
+.zhihu-author-answers-popover > header > div,
+.zhihu-search-popover > header > div {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -156,7 +160,8 @@
 
 .zhihu-hot-popover > header span,
 .zhihu-history-popover > header span,
-.zhihu-author-answers-popover > header span {
+.zhihu-author-answers-popover > header span,
+.zhihu-search-popover > header span {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
@@ -168,7 +173,8 @@
 
 .zhihu-hot-popover ol,
 .zhihu-history-popover ul,
-.zhihu-author-answers-popover ul {
+.zhihu-author-answers-popover ul,
+.zhihu-search-popover ul {
   min-height: 0;
   margin: 0;
   padding: var(--size-4-2);
@@ -179,7 +185,8 @@
 
 .zhihu-hot-popover li > button,
 .zhihu-history-popover li > .zhihu-history-popover__title,
-.zhihu-author-answers-popover li > button {
+.zhihu-author-answers-popover li > button,
+.zhihu-search-popover li > button {
   appearance: none;
   display: flex;
   width: 100%;
@@ -200,7 +207,9 @@
 .zhihu-history-popover li > .zhihu-history-popover__title:hover,
 .zhihu-history-popover li > .zhihu-history-popover__title:focus-visible,
 .zhihu-author-answers-popover li > button:hover,
-.zhihu-author-answers-popover li > button:focus-visible {
+.zhihu-author-answers-popover li > button:focus-visible,
+.zhihu-search-popover li > button:hover,
+.zhihu-search-popover li > button:focus-visible {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
   box-shadow: none;
@@ -235,6 +244,95 @@
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
+}
+
+.zhihu-search-popover {
+  width: min(520px, calc(100vw - 24px));
+}
+
+.zhihu-search-popover__form {
+  display: flex;
+  gap: var(--size-4-2);
+  padding: var(--size-4-3) var(--size-4-4);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.zhihu-search-popover__form input {
+  min-width: 0;
+  flex: 1;
+}
+
+.zhihu-search-popover__state {
+  display: flex;
+  min-height: 140px;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-6);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.zhihu-search-popover__state.is-error,
+.zhihu-search-popover > footer > span[role="alert"] {
+  color: var(--text-error);
+}
+
+.zhihu-search-popover__content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.zhihu-search-popover__content > strong,
+.zhihu-search-popover__content > span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.4;
+}
+
+.zhihu-search-popover__content > span {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.zhihu-search-popover__content > small {
+  color: var(--text-faint);
+}
+
+.zhihu-answers .zhihu-search-popover li > button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  padding: var(--size-4-3);
+  border-radius: var(--radius-s);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.zhihu-answers .zhihu-search-popover li > button:hover,
+.zhihu-answers .zhihu-search-popover li > button:focus-visible {
+  background: var(--background-modifier-hover);
+}
+
+.zhihu-search-popover > footer {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-4) var(--size-4-3);
+  border-top: 1px solid var(--background-modifier-border);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  text-align: center;
 }
 
 .zhihu-hot-popover__content > strong {

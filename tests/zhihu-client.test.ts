@@ -6,9 +6,41 @@ import {
   buildChildCommentsUrl,
   buildHotListUrl,
   buildQuestionFeedsUrl,
+  buildSearchAnswersUrl,
 } from "@/zhihu/urls";
 
 describe("buildQuestionFeedsUrl", () => {
+  it("builds a filtered answer search URL and validates paging", () => {
+    const initial = new URL(buildSearchAnswersUrl("  Obsidian  "));
+    expect(initial.pathname).toBe("/api/v4/search_v3");
+    expect(initial.searchParams.get("q")).toBe("Obsidian");
+    expect(initial.searchParams.get("vertical")).toBe("answer");
+    expect(initial.searchParams.get("search_source")).toBe("Filter");
+    expect(initial.searchParams.get("limit")).toBe("20");
+    expect(initial.searchParams.get("include")).toContain("data[*].highlight");
+
+    const next =
+      "https://www.zhihu.com/api/v4/search_v3?q=Obsidian&offset=20&limit=20";
+    expect(buildSearchAnswersUrl("Obsidian", { pageUrl: next })).toContain(
+      `${next}&include=`,
+    );
+    expect(() =>
+      buildSearchAnswersUrl("another query", { pageUrl: next }),
+    ).toThrow("Invalid Zhihu search page URL.");
+  });
+
+  it("rejects empty, overlong and invalid-limit search requests", () => {
+    expect(() => buildSearchAnswersUrl("   ")).toThrow(
+      "Search query must contain between 1 and 200 characters.",
+    );
+    expect(() => buildSearchAnswersUrl("x".repeat(201))).toThrow(
+      "Search query must contain between 1 and 200 characters.",
+    );
+    expect(() => buildSearchAnswersUrl("Obsidian", { limit: 21 })).toThrow(
+      "Search limit must be an integer between 1 and 20.",
+    );
+  });
+
   it("builds and validates answer comment pagination URLs", () => {
     expect(buildAnswerCommentsUrl("123", { limit: 20, order: "time" })).toBe(
       "https://www.zhihu.com/api/v4/comment_v5/answers/123/root_comment?order_by=ts&limit=20",

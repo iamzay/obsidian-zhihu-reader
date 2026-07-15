@@ -49,6 +49,22 @@ export interface AuthorAnswerPage {
   readonly nextPageUrl: string | null;
 }
 
+export interface SearchAnswerResult {
+  readonly answerId: string;
+  readonly questionId: string;
+  readonly questionTitle: string;
+  readonly excerpt: string;
+  readonly author: ZhihuAuthor;
+  readonly voteupCount: number;
+  readonly commentCount: number;
+}
+
+export interface SearchAnswerPage {
+  readonly results: readonly SearchAnswerResult[];
+  readonly isEnd: boolean;
+  readonly nextPageUrl: string | null;
+}
+
 export interface AnswerDocument {
   readonly id: string;
   readonly url: string;

@@ -91,6 +91,7 @@ function hotListGateway(
     },
     getQuestion: () => Promise.reject(new Error("Not used")),
     getAnswer: () => Promise.reject(new Error("Not used")),
+    getSearchAnswerPage: () => Promise.reject(new Error("Not used")),
     getAnswerCommentPage: () => Promise.reject(new Error("Not used")),
     getChildCommentPage: () => Promise.reject(new Error("Not used")),
     getAuthorAnswerPage: () => Promise.reject(new Error("Not used")),

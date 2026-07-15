@@ -26,6 +26,7 @@
 | `DailyHotList` | `load`、`snapshot`、`subscribe` | 请求合并、短时缓存、刷新、过期结果和错误恢复 |
 | `AuthorAnswerList` | `showAuthor`、`loadMore`、`retry` | 延迟加载、作者切换、分页游标、去重和局部错误恢复 |
 | `AnswerCommentList` | `showAnswer`、`loadMore`、`toggleReplies` | 排序、根评论/子回复分页、去重、并发和局部错误恢复 |
+| `ZhihuAnswerSearch` | `search`、`loadMore`、`retry` | 关键词切换、回答过滤、分页、去重和过期响应 |
 | `AnswerNoteWriter` | `save` | 路径模板、frontmatter、冲突、原子写入和附件 |
 
 `ZhihuGateway` 面向真正的外部依赖知乎。其实现内部设置 `ZhihuTransport` seam：生产使用 Obsidian `requestUrl` adapter，测试使用 fixture adapter。调用者不接触 HTTP URL、原始 JSON 或 Zod schema。
@@ -54,7 +55,8 @@ flowchart LR
     T12 --> T13["ZA-13 作者回答 Popover"]
     T03 --> T13
     T13 --> T14["ZA-14 回答评论阅读"]
-    T14 --> T10
+    T14 --> T15["ZA-15 搜索知乎回答"]
+    T15 --> T10
     T10 --> T11["ZA-11 发布准备"]
 ```
 
@@ -376,6 +378,26 @@ tests/zhihu-schemas.test.ts
 - Escape、遮罩、关闭按钮、焦点陷阱和移动端底部抽屉可用。
 - 评论内容不直接注入 HTML，不支持点赞、回复或发布等写操作。
 
+### ZA-15 搜索知乎回答
+
+目标：通过关键词发现知乎回答，并复用统一阅读面板继续阅读。
+
+实现内容：
+
+- 扩展 `search_v3` 回答 vertical 的 URL builder、Gateway、Zod schema 和脱敏 fixtures。
+- 实现 `ZhihuAnswerSearch`，封装关键词切换、分页游标、回答去重、失败重试和过期响应防护。
+- 在阅读器工具栏实现 SearchPopover，并增加“搜索知乎回答”命令入口。
+- 搜索结果显示问题标题、回答摘要、作者、赞同数和评论数；点击后以回答目标进入阅读器。
+- 搜索 Popover 与历史、热榜互斥；搜索本身不写查询历史或 Vault。
+
+验收标准：
+
+- 空关键词不发请求，首尾空白被移除，超长关键词和非法分页 URL 被拒绝。
+- 只解析可由当前阅读器打开的回答结果，推广及其他内容类型不会显示。
+- 非安全数字 ID 从 URL 恢复精确字符串；无法恢复时不得以失真 ID 导航。
+- 分页失败保留已有结果并可重试，旧关键词响应不会覆盖新结果。
+- Enter 提交、Escape/外部点击关闭、焦点返回、滚动和按钮分页均可用；匿名失败时提示登录。
+
 ## 5. 推荐里程碑
 
 ### Milestone A：可查询、可阅读
@@ -392,7 +414,7 @@ tests/zhihu-schemas.test.ts
 
 ### Milestone D：可发布版本
 
-完成 ZA-09 至 ZA-14。登录、每日热榜、作者回答发现、评论阅读、兼容性、无障碍和发布流程完成。
+完成 ZA-09 至 ZA-15。登录、每日热榜、作者回答发现、评论阅读、回答搜索、兼容性、无障碍和发布流程完成。
 
 ## 6. 第一项建议
 

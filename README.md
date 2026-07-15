@@ -61,6 +61,14 @@ GET https://www.zhihu.com/api/v4/comment_v5/answers/{answerId}/root_comment?orde
 GET https://www.zhihu.com/api/v4/comment_v5/comment/{commentId}/child_comment?limit=10
 ```
 
+回答搜索使用参考客户端的 `search_v3` 回答筛选：
+
+```text
+GET https://www.zhihu.com/api/v4/search_v3?q={query}&t=general&vertical=answer&limit=20
+```
+
+知乎搜索可能要求有效登录；插件会复用已保存的登录 Cookie 和签名请求，不保存搜索关键词历史。
+
 - 返回体主要由 `data` 和 `paging` 组成，回答数据位于 `data[*].target`。
 - 请求统一携带浏览器 User-Agent；需要登录态时额外携带知乎 Cookie。
 - 登录态请求会复用插件保存的知乎 Cookie，并根据 `d_c0` 生成 `x-zse-93` / `x-zse-96` 请求头；本项目不实现知乎写操作。
@@ -76,6 +84,7 @@ src/
   hotlist/                   # 每日热榜状态、缓存与错误恢复
   author/                    # 作者回答按需加载与分页状态
   comments/                  # 回答评论、子回复与排序分页状态
+  search/                    # 回答搜索、分页与错误恢复状态
   zhihu/                     # API 客户端和 Zod schema
   markdown/                  # HTML → Markdown
 tests/                       # Vitest 单元测试

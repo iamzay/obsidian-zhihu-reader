@@ -7,6 +7,7 @@ import type {
   AnswerOrder,
   CommentOrder,
   ReaderSnapshot,
+  SearchAnswerResult,
   ZhihuComment,
   ZhihuTarget,
 } from "@/domain/zhihu";
@@ -27,6 +28,10 @@ import type {
   QuestionHistoryEntry,
 } from "@/history/QuestionHistory";
 import { zhihuHtmlToMarkdown } from "@/markdown/toMarkdown";
+import {
+  ZhihuAnswerSearch,
+  type ZhihuAnswerSearchSnapshot,
+} from "@/search/ZhihuAnswerSearch";
 import {
   ReaderSession,
   type ReaderSessionOptionsProvider,
@@ -60,20 +65,24 @@ export class ZhihuAnswersView extends ItemView {
   private readonly dailyHotList: DailyHotList;
   private readonly authorAnswerList: AuthorAnswerList;
   private readonly answerCommentList: AnswerCommentList;
+  private readonly search: ZhihuAnswerSearch;
   private unsubscribeSession: (() => void) | null = null;
   private unsubscribeDailyHotList: (() => void) | null = null;
   private unsubscribeAuthorAnswerList: (() => void) | null = null;
   private unsubscribeAnswerCommentList: (() => void) | null = null;
+  private unsubscribeSearch: (() => void) | null = null;
   private snapshot: ReaderSnapshot;
   private dailyHotListSnapshot: DailyHotListSnapshot;
   private authorAnswerListSnapshot: AuthorAnswerListSnapshot;
   private answerCommentListSnapshot: AnswerCommentListSnapshot;
+  private searchSnapshot: ZhihuAnswerSearchSnapshot;
   private authSnapshot: ZhihuAuthSnapshot;
   private previousAnswerId: string | null = null;
   private historyEntries: readonly QuestionHistoryEntry[];
   private isHistoryOpen = false;
   private isDailyHotListOpen = false;
   private isCommentsOpen = false;
+  private isSearchOpen = false;
   private shouldRecordQuery = false;
   private savingAnswerId: string | null = null;
   private readonly savedPaths = new Map<string, string>();
@@ -93,10 +102,12 @@ export class ZhihuAnswersView extends ItemView {
     this.dailyHotList = new DailyHotList(gateway);
     this.authorAnswerList = new AuthorAnswerList(gateway);
     this.answerCommentList = new AnswerCommentList(gateway);
+    this.search = new ZhihuAnswerSearch(gateway);
     this.snapshot = this.session.snapshot();
     this.dailyHotListSnapshot = this.dailyHotList.snapshot();
     this.authorAnswerListSnapshot = this.authorAnswerList.snapshot();
     this.answerCommentListSnapshot = this.answerCommentList.snapshot();
+    this.searchSnapshot = this.search.snapshot();
     this.authSnapshot = initialAuth;
     this.historyEntries = initialHistory;
   }
@@ -157,6 +168,10 @@ export class ZhihuAnswersView extends ItemView {
         this.render();
       },
     );
+    this.unsubscribeSearch = this.search.subscribe((snapshot) => {
+      this.searchSnapshot = snapshot;
+      this.render();
+    });
     this.render();
     return Promise.resolve();
   }
@@ -170,10 +185,13 @@ export class ZhihuAnswersView extends ItemView {
     this.unsubscribeAuthorAnswerList = null;
     this.unsubscribeAnswerCommentList?.();
     this.unsubscribeAnswerCommentList = null;
+    this.unsubscribeSearch?.();
+    this.unsubscribeSearch = null;
     this.session.dispose();
     this.dailyHotList.dispose();
     this.authorAnswerList.dispose();
     this.answerCommentList.dispose();
+    this.search.dispose();
     this.root?.unmount();
     this.root = null;
     return Promise.resolve();
@@ -191,15 +209,27 @@ export class ZhihuAnswersView extends ItemView {
 
   openHistoryPopover(): void {
     this.isDailyHotListOpen = false;
+    this.isSearchOpen = false;
+    this.isCommentsOpen = false;
     this.isHistoryOpen = true;
     this.render();
   }
 
   openDailyHotListPopover(): void {
     this.isHistoryOpen = false;
+    this.isSearchOpen = false;
+    this.isCommentsOpen = false;
     this.isDailyHotListOpen = true;
     this.render();
     void this.dailyHotList.load();
+  }
+
+  openSearchPopover(): void {
+    this.isHistoryOpen = false;
+    this.isDailyHotListOpen = false;
+    this.isCommentsOpen = false;
+    this.isSearchOpen = true;
+    this.render();
   }
 
   setAuthSnapshot(snapshot: ZhihuAuthSnapshot): void {
@@ -299,6 +329,7 @@ export class ZhihuAnswersView extends ItemView {
         this.isHistoryOpen = !this.isHistoryOpen;
         if (this.isHistoryOpen) {
           this.isDailyHotListOpen = false;
+          this.isSearchOpen = false;
         }
         this.render();
       },
@@ -320,6 +351,7 @@ export class ZhihuAnswersView extends ItemView {
         this.isDailyHotListOpen = !this.isDailyHotListOpen;
         if (this.isDailyHotListOpen) {
           this.isHistoryOpen = false;
+          this.isSearchOpen = false;
           void this.dailyHotList.load();
         }
         this.render();
@@ -334,6 +366,36 @@ export class ZhihuAnswersView extends ItemView {
       openDailyHotItem: (questionId: string) => {
         this.isDailyHotListOpen = false;
         void this.openTarget({ type: "question", questionId });
+      },
+      toggleSearch: () => {
+        this.isSearchOpen = !this.isSearchOpen;
+        if (this.isSearchOpen) {
+          this.isHistoryOpen = false;
+          this.isDailyHotListOpen = false;
+          this.isCommentsOpen = false;
+        }
+        this.render();
+      },
+      closeSearch: () => {
+        this.isSearchOpen = false;
+        this.render();
+      },
+      searchAnswers: (query: string) => {
+        void this.search.search(query);
+      },
+      loadMoreSearchAnswers: () => {
+        void this.search.loadMore();
+      },
+      retrySearchAnswers: () => {
+        void this.search.retry();
+      },
+      openSearchAnswer: (result: SearchAnswerResult) => {
+        this.isSearchOpen = false;
+        void this.openTarget({
+          type: "answer",
+          answerId: result.answerId,
+          questionId: result.questionId,
+        });
       },
       showAuthorAnswers: (author) => {
         void this.authorAnswerList.showAuthor(author);
@@ -355,6 +417,7 @@ export class ZhihuAnswersView extends ItemView {
         this.isCommentsOpen = true;
         this.isHistoryOpen = false;
         this.isDailyHotListOpen = false;
+        this.isSearchOpen = false;
         void this.answerCommentList.showAnswer(answerId);
         this.render();
       },
@@ -402,6 +465,8 @@ export class ZhihuAnswersView extends ItemView {
           authorAnswerList={this.authorAnswerListSnapshot}
           answerCommentList={this.answerCommentListSnapshot}
           isCommentsOpen={this.isCommentsOpen}
+          search={this.searchSnapshot}
+          isSearchOpen={this.isSearchOpen}
           isDailyHotListOpen={this.isDailyHotListOpen}
           saveState={this.currentSaveState()}
           actions={this.readerActions()}

@@ -19,6 +19,8 @@ const ANSWER_INCLUDE = [
 ].join(",");
 const AUTHOR_ANSWERS_INCLUDE =
   "data[*].excerpt,voteup_count,created_time,question";
+const SEARCH_INCLUDE = "data[*].highlight,object,type";
+const SEARCH_VERTICAL_INFO = "0,0,0,0,0,0,0,0,0,0,0,0";
 
 export interface FetchQuestionAnswersOptions {
   limit?: number;
@@ -40,6 +42,46 @@ export interface FetchAnswerCommentsOptions {
 export interface FetchChildCommentsOptions {
   limit?: number;
   pageUrl?: string;
+}
+
+export interface FetchSearchAnswersOptions {
+  limit?: number;
+  pageUrl?: string;
+}
+
+export function buildSearchAnswersUrl(
+  query: string,
+  options: FetchSearchAnswersOptions = {},
+): string {
+  const normalizedQuery = query.trim();
+  if (normalizedQuery.length === 0 || normalizedQuery.length > 200) {
+    throw new Error("Search query must contain between 1 and 200 characters.");
+  }
+  if (options.pageUrl !== undefined) {
+    const pageUrl = new URL(
+      validateSearchPageUrl(normalizedQuery, options.pageUrl),
+    );
+    pageUrl.searchParams.set("include", SEARCH_INCLUDE);
+    return pageUrl.toString();
+  }
+
+  const limit = options.limit ?? 20;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 20) {
+    throw new Error("Search limit must be an integer between 1 and 20.");
+  }
+  const url = new URL("/api/v4/search_v3", ZHIHU_WEB_ORIGIN);
+  url.searchParams.set("gk_version", "gz-gaokao");
+  url.searchParams.set("t", "general");
+  url.searchParams.set("q", normalizedQuery);
+  url.searchParams.set("correction", "1");
+  url.searchParams.set("offset", "0");
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("search_source", "Filter");
+  url.searchParams.set("show_all_topics", "0");
+  url.searchParams.set("vertical", "answer");
+  url.searchParams.set("vertical_info", SEARCH_VERTICAL_INFO);
+  url.searchParams.set("include", SEARCH_INCLUDE);
+  return url.toString();
 }
 
 export function buildAnswerCommentsUrl(
@@ -223,6 +265,19 @@ function validateCommentPageUrl(path: string, pageUrl: string): string {
     url.pathname !== path
   ) {
     throw new Error("Invalid Zhihu comments page URL.");
+  }
+  return url.toString();
+}
+
+function validateSearchPageUrl(query: string, pageUrl: string): string {
+  const url = new URL(pageUrl);
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "www.zhihu.com" ||
+    url.pathname !== "/api/v4/search_v3" ||
+    url.searchParams.get("q") !== query
+  ) {
+    throw new Error("Invalid Zhihu search page URL.");
   }
   return url.toString();
 }

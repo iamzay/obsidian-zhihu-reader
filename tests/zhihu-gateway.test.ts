@@ -97,6 +97,24 @@ describe("HttpZhihuGateway", () => {
     );
   });
 
+  it("loads answer search results through the authenticated gateway", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("search-answers.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport);
+
+    const page = await gateway.getSearchAnswerPage("Obsidian");
+
+    expect(page.results).toHaveLength(2);
+    const request = new URL(transport.requests[0]?.url ?? "");
+    expect(request.pathname).toBe("/api/v4/search_v3");
+    expect(request.searchParams.get("vertical")).toBe("answer");
+    expect(transport.requests[0]?.headers.Referer).toBe(
+      "https://www.zhihu.com/search?q=Obsidian&type=content",
+    );
+  });
+
   it("loads the daily hot list through the authenticated transport seam", async () => {
     const transport = new FixtureZhihuTransport(() => ({
       status: 200,

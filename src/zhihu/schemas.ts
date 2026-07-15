@@ -8,6 +8,8 @@ import type {
   CommentPage,
   QuestionReference,
   QuestionSummary,
+  SearchAnswerPage,
+  SearchAnswerResult,
   ZhihuComment,
   ZhihuHotListItem,
   ZhihuAuthor,
@@ -188,6 +190,53 @@ const zhihuCommentsResponseSchema = z.object({
     .passthrough(),
 });
 
+const zhihuSearchAnswerTargetSchema = z
+  .object({
+    type: z.literal("answer"),
+    id: z.union([z.string(), z.number()]).optional(),
+    url: z.string().optional(),
+    excerpt: z.string().catch(""),
+    voteup_count: nonNegativeIntegerSchema,
+    comment_count: nonNegativeIntegerSchema,
+    author: zhihuAuthorSchema.nullish(),
+    question: z.preprocess(
+      (value) => {
+        if (typeof value !== "object" || value === null || Array.isArray(value)) {
+          return value;
+        }
+        const question = value as Record<string, unknown>;
+        return question.title === undefined && typeof question.name === "string"
+          ? { ...question, title: question.name }
+          : value;
+      },
+      z
+        .object({
+          id: z.union([z.string(), z.number()]).optional(),
+          title: z.string().min(1),
+          url: z.string().optional(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
+
+const zhihuSearchResponseSchema = z.object({
+  data: z.array(
+    z
+      .object({
+        type: z.string(),
+        object: z.unknown().optional(),
+      })
+      .passthrough(),
+  ),
+  paging: z
+    .object({
+      is_end: z.boolean().catch(false),
+      next: optionalUrlSchema,
+    })
+    .passthrough(),
+});
+
 const zhihuErrorResponseSchema = z.object({
   error: z
     .object({
@@ -285,6 +334,24 @@ export function parseCommentsResponse(text: string): CommentPage {
     const response = zhihuCommentsResponseSchema.parse(parseResponseJson(text));
     return {
       comments: response.data.map(toComment),
+      isEnd: response.paging.is_end,
+      nextPageUrl: response.paging.next ?? null,
+    };
+  });
+}
+
+export function parseSearchAnswersResponse(text: string): SearchAnswerPage {
+  return validateResponse(() => {
+    const response = zhihuSearchResponseSchema.parse(parseResponseJson(text));
+    const results = response.data.flatMap((item) => {
+      if (item.type !== "search_result") {
+        return [];
+      }
+      const answer = zhihuSearchAnswerTargetSchema.safeParse(item.object);
+      return answer.success ? [toSearchAnswerResult(answer.data)] : [];
+    });
+    return {
+      results,
       isEnd: response.paging.is_end,
       nextPageUrl: response.paging.next ?? null,
     };
@@ -445,6 +512,30 @@ function toComment(
   };
 }
 
+function toSearchAnswerResult(
+  answer: z.output<typeof zhihuSearchAnswerTargetSchema>,
+): SearchAnswerResult {
+  return {
+    answerId: exactId(
+      answer.id,
+      answer.url,
+      /\/answers?\/(\d+)(?:\/|$)/u,
+      "answer",
+    ),
+    questionId: exactId(
+      answer.question.id,
+      answer.question.url,
+      /\/questions?\/(\d+)(?:\/|$)/u,
+      "question",
+    ),
+    questionTitle: plainSearchText(answer.question.title),
+    excerpt: plainSearchText(answer.excerpt),
+    author: toAuthor(answer.author),
+    voteupCount: answer.voteup_count,
+    commentCount: answer.comment_count,
+  };
+}
+
 function exactId(
   value: string | number | undefined,
   url: string | undefined,
@@ -461,7 +552,20 @@ function exactId(
   if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
     return String(value);
   }
-  throw new Error(`Zhihu author answer does not contain an exact ${label} ID.`);
+  throw new Error(`Zhihu response does not contain an exact ${label} ID.`);
+}
+
+function plainSearchText(value: string): string {
+  return value
+    .replace(/<[^>]*>/gu, "")
+    .replaceAll("&nbsp;", " ")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replace(/\s+/gu, " ")
+    .trim();
 }
 
 function hotQuestionId(

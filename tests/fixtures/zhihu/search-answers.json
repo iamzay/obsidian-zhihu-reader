@@ -1,0 +1,56 @@
+{
+  "data": [
+    {
+      "type": "search_result",
+      "id": "search-result-1",
+      "object": {
+        "type": "answer",
+        "id": 9007199254740992,
+        "url": "https://www.zhihu.com/api/v4/answers/90071992547409931234",
+        "excerpt": "使用 <em>Obsidian</em> 建立阅读 &amp; 笔记工作流。",
+        "voteup_count": 128,
+        "comment_count": 6,
+        "author": {
+          "id": "fixture-author-id",
+          "url_token": "fixture-author",
+          "name": "示例作者",
+          "headline": "阅读与写作"
+        },
+        "question": {
+          "id": 9007199254740992,
+          "url": "https://www.zhihu.com/api/v4/questions/1993016651038364760",
+          "title": "如何用 <em>Obsidian</em> 建立阅读工作流？"
+        }
+      }
+    },
+    {
+      "type": "knowledge_ad",
+      "id": "ignored-ad",
+      "object": {
+        "title": "不应显示的推广内容"
+      }
+    },
+    {
+      "type": "search_result",
+      "id": "search-result-2",
+      "object": {
+        "type": "answer",
+        "id": "234567890",
+        "url": "https://www.zhihu.com/answers/234567890",
+        "excerpt": "先阅读，再决定是否保存。",
+        "voteup_count": 32,
+        "comment_count": 1,
+        "author": null,
+        "question": {
+          "id": "123456789",
+          "url": "https://www.zhihu.com/questions/123456789",
+          "title": "如何减少知识库中的信息噪声？"
+        }
+      }
+    }
+  ],
+  "paging": {
+    "is_end": false,
+    "next": "https://www.zhihu.com/api/v4/search_v3?gk_version=gz-gaokao&t=general&q=Obsidian&offset=20&limit=20&vertical=answer"
+  }
+}

@@ -9,6 +9,7 @@ import {
   parseHotListResponse,
   parseQuestionFeedsResponse,
   parseQuestionResponse,
+  parseSearchAnswersResponse,
   ZhihuApiResponseError,
   ZhihuResponseValidationError,
 } from "@/zhihu/schemas";
@@ -91,6 +92,59 @@ describe("Zhihu response parsing", () => {
       headline: "",
     });
     expect(page.nextPageUrl).toContain("offset=10");
+  });
+
+  it("parses answer search results, strips highlights and skips unsupported cards", () => {
+    const page = parseSearchAnswersResponse(fixture("search-answers.json"));
+
+    expect(page.results).toHaveLength(2);
+    expect(page.results[0]).toEqual({
+      answerId: "90071992547409931234",
+      questionId: "1993016651038364760",
+      questionTitle: "如何用 Obsidian 建立阅读工作流？",
+      excerpt: "使用 Obsidian 建立阅读 & 笔记工作流。",
+      author: {
+        id: "fixture-author-id",
+        urlToken: "fixture-author",
+        name: "示例作者",
+        headline: "阅读与写作",
+        profileUrl: "https://www.zhihu.com/people/fixture-author",
+      },
+      voteupCount: 128,
+      commentCount: 6,
+    });
+    expect(page.results[1]?.author).toEqual({
+      name: "未知作者",
+      headline: "",
+    });
+    expect(page.nextPageUrl).toContain("offset=20");
+  });
+
+  it("reads question names from live answer search results", () => {
+    const page = parseSearchAnswersResponse(JSON.stringify({
+      data: [{
+        type: "search_result",
+        object: {
+          type: "answer",
+          id: "234567890",
+          url: "https://www.zhihu.com/answers/234567890",
+          excerpt: "搜索结果摘要",
+          voteup_count: 32,
+          comment_count: 1,
+          author: null,
+          question: {
+            type: "question",
+            id: "123456789",
+            url: "https://www.zhihu.com/questions/123456789",
+            name: "搜索接口返回的问题标题",
+          },
+        },
+      }],
+      paging: { is_end: true },
+    }));
+
+    expect(page.results).toHaveLength(1);
+    expect(page.results[0]?.questionTitle).toBe("搜索接口返回的问题标题");
   });
 
   it("parses hot list items without losing an unsafe numeric question id", () => {
