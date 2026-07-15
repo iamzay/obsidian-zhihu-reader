@@ -139,7 +139,7 @@ tests/zhihu-schemas.test.ts
 - `requestUrl` 放入生产 transport adapter；测试使用 fixture adapter。
 - 将回答 HTML 转成 Markdown，再使用 Obsidian `MarkdownRenderer` 渲染。
 - 正式实现方案 A 的 `ReaderToolbar`、`QuestionSummary`、`AnswerCard` 和基础 loading/error 状态。
-- 这一 task 暂不加载 feed 回答；导航区显示第一篇状态但翻页禁用。
+- 这一 task 暂不加载 feed 回答；工具栏回答导航显示第一篇状态但翻页禁用。
 
 验收标准：
 
@@ -157,7 +157,7 @@ tests/zhihu-schemas.test.ts
 - 实现 `getQuestion(questionId)` 和 `getAnswerPage(questionId, options)`。
 - 创建 `ReaderSession`，问题模式使用 feed 第一篇作为队列首项。
 - 同一批回答缓存在内存，DOM 只挂载当前回答。
-- 实现上一回答、下一回答、当前位置、排序切换和 `paging.next`。
+- 在粘性工具栏实现上一回答、下一回答、当前位置、排序切换和 `paging.next`。
 - 当前批次用完后，下一次点击才请求下一批。
 - 实现重复点击防抖、进行中请求合并和回答 ID 去重。
 

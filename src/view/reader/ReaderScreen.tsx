@@ -89,6 +89,8 @@ export function ReaderScreen({
         dailyHotList={dailyHotList}
         isDailyHotListOpen={isDailyHotListOpen}
         dailyHotActions={actions}
+        snapshot={snapshot}
+        answerActions={actions}
       />
       {snapshot.phase === "idle" && (
         <EmptyReaderState
@@ -129,6 +131,8 @@ function ReaderToolbar({
   dailyHotList,
   isDailyHotListOpen,
   dailyHotActions,
+  snapshot,
+  answerActions,
 }: {
   readonly auth: ZhihuAuthSnapshot;
   readonly onOpenUrl: () => void;
@@ -140,6 +144,8 @@ function ReaderToolbar({
   readonly dailyHotList: DailyHotListSnapshot;
   readonly isDailyHotListOpen: boolean;
   readonly dailyHotActions: DailyHotPopoverActions;
+  readonly snapshot: ReaderSnapshot;
+  readonly answerActions: ReaderScreenActions;
 }): React.JSX.Element {
   return (
     <header className="zhihu-reader-toolbar">
@@ -173,6 +179,12 @@ function ReaderToolbar({
           {authLabel(auth)}
         </span>
       </nav>
+      {snapshot.phase === "ready" && (
+        <AnswerToolbarNavigation
+          snapshot={snapshot}
+          actions={answerActions}
+        />
+      )}
     </header>
   );
 }
@@ -279,7 +291,6 @@ function ReaderReadyState({
           onOpenNote={actions.openNote}
         />
       )}
-      <AnswerNavigation snapshot={snapshot} actions={actions} />
     </div>
   );
 }
@@ -421,7 +432,7 @@ function AnswerCard({
   );
 }
 
-function AnswerNavigation({
+function AnswerToolbarNavigation({
   snapshot,
   actions,
 }: {
@@ -436,51 +447,59 @@ function AnswerNavigation({
     : `第 ${snapshot.currentIndex + 1} 篇`;
 
   return (
-    <section className="zhihu-answer-navigation-wrap">
-      <nav className="zhihu-answer-navigation" aria-label="回答导航">
-        <button
-          type="button"
-          onClick={actions.previous}
-          disabled={snapshot.currentIndex <= 0}
+    <nav
+      className="zhihu-reader-toolbar__answer-navigation"
+      aria-label="回答导航"
+    >
+      <button
+        type="button"
+        onClick={actions.previous}
+        disabled={snapshot.currentIndex <= 0}
+      >
+        ← 上一回答
+      </button>
+      <strong className="zhihu-reader-toolbar__answer-position" aria-live="polite">
+        {position}
+      </strong>
+      <label>
+        <span className="visually-hidden">回答排序</span>
+        <select
+          aria-label="回答排序"
+          value={snapshot.order}
+          onChange={(event) =>
+            actions.changeOrder(event.target.value as AnswerOrder)
+          }
         >
-          ← 上一回答
-        </button>
-        <span>
-          <strong>{position}</strong>
-          <label>
-            <span className="visually-hidden">回答排序</span>
-            <select
-              value={snapshot.order}
-              onChange={(event) =>
-                actions.changeOrder(event.target.value as AnswerOrder)
-              }
-            >
-              <option value="default">综合排序</option>
-              <option value="updated">最近更新</option>
-            </select>
-          </label>
-        </span>
-        <button
-          className="mod-cta"
-          type="button"
-          onClick={actions.next}
-          disabled={!canNext || snapshot.isLoadingNextPage}
-        >
-          {snapshot.isLoadingNextPage ? "加载中…" : "下一回答 →"}
-        </button>
-      </nav>
+          <option value="default">综合排序</option>
+          <option value="updated">最近更新</option>
+        </select>
+      </label>
+      <button
+        className="mod-cta"
+        type="button"
+        onClick={actions.next}
+        disabled={!canNext || snapshot.isLoadingNextPage}
+      >
+        {snapshot.isLoadingNextPage ? "加载中…" : "下一回答 →"}
+      </button>
       {snapshot.navigationError !== null && (
-        <div className="zhihu-answer-navigation__error" role="alert">
-          <span>{snapshot.navigationError}</span>
+        <span
+          className="zhihu-reader-toolbar__answer-feedback is-error"
+          role="alert"
+          title={snapshot.navigationError}
+        >
+          <span>下一篇加载失败</span>
           <button type="button" onClick={actions.retryNavigation}>
-            重试加载
+            重试
           </button>
-        </div>
+        </span>
       )}
       {snapshot.isEnd && !hasQueuedNext && current !== undefined && (
-        <p className="zhihu-answer-navigation__end">已是最后一篇</p>
+        <span className="zhihu-reader-toolbar__answer-feedback">
+          已是最后一篇
+        </span>
       )}
-    </section>
+    </nav>
   );
 }
 
