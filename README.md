@@ -203,3 +203,7 @@ npm run check
 - [产品需求文档](docs/PRODUCT.md)
 - [UI 设计规范](docs/UI-DESIGN.md)
 - [实施任务拆分](docs/IMPLEMENTATION-PLAN.md)
+
+## License
+
+本项目基于 [MIT License](LICENSE) 开源。
