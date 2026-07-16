@@ -226,9 +226,7 @@ function ReaderToolbar({
         <button type="button" onClick={onRefresh} disabled={!canRefresh}>
           刷新
         </button>
-        <span className="zhihu-reader-toolbar__login" title={auth.message ?? undefined}>
-          {authLabel(auth)}
-        </span>
+        <AuthIndicator auth={auth} />
       </nav>
       {snapshot.phase === "ready" && (
         <AnswerToolbarNavigation
@@ -620,6 +618,43 @@ function authLabel(auth: ZhihuAuthSnapshot): string {
     default:
       return "未登录";
   }
+}
+
+function AuthIndicator({
+  auth,
+}: {
+  readonly auth: ZhihuAuthSnapshot;
+}): React.JSX.Element {
+  const label = authLabel(auth);
+  if (auth.phase !== "authenticated") {
+    return (
+      <span
+        className="zhihu-reader-toolbar__login is-text"
+        title={auth.message ?? label}
+      >
+        {label}
+      </span>
+    );
+  }
+
+  const avatarUrl = auth.profile?.avatarUrl;
+  return (
+    <span
+      className="zhihu-reader-toolbar__login is-avatar"
+      role="img"
+      aria-label={label}
+      title={label}
+    >
+      {avatarUrl === undefined ? (
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+        </svg>
+      ) : (
+        <img src={avatarUrl} alt="" />
+      )}
+    </span>
+  );
 }
 
 function formatAnswerDate(timestamp: number | undefined): string {

@@ -49,7 +49,16 @@ import {
 } from "@/view/reader/ReaderScreen";
 
 export const VIEW_TYPE_ZHIHU_ANSWERS = "zhihu-answers-view";
-export const ZHIHU_READER_ICON = "book-open";
+export const ZHIHU_READER_ICON = "zhihu-reader";
+export const ZHIHU_READER_ICON_SVG = [
+  '<text x="50" y="77"',
+  ' text-anchor="middle"',
+  ' font-family="system-ui, sans-serif"',
+  ' font-size="78"',
+  ' font-weight="700"',
+  ' fill="currentColor"',
+  ' stroke="none">知</text>',
+].join("");
 
 export interface ZhihuAnswersViewActions {
   readonly openUrlModal: () => void;

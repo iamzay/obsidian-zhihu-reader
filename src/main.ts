@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { addIcon, Notice, Plugin, TFile } from "obsidian";
 
 import { renderQrCodeDataUrl } from "@/auth/QrCodeRenderer";
 import { ZhihuAuthSession } from "@/auth/ZhihuAuthSession";
@@ -22,6 +22,7 @@ import { ObsidianZhihuTransport } from "@/zhihu/transport";
 import {
   VIEW_TYPE_ZHIHU_ANSWERS,
   ZHIHU_READER_ICON,
+  ZHIHU_READER_ICON_SVG,
   ZhihuAnswersView,
 } from "@/view/ZhihuAnswersView";
 import { ZhihuUrlModal } from "@/view/ZhihuUrlModal";
@@ -39,6 +40,8 @@ export default class ZhihuAnswersPlugin extends Plugin {
   private answerNoteWriter!: AnswerNoteWriter;
 
   override async onload(): Promise<void> {
+    addIcon(ZHIHU_READER_ICON, ZHIHU_READER_ICON_SVG);
+
     this.dataRepository = new PluginDataRepository(
       new ObsidianPluginDataStorage(this),
     );
