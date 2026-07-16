@@ -19,6 +19,9 @@ answers worth keeping as Markdown notes.
 - Vote for or unvote an answer.
 - Save one answer per Markdown file.
 
+## Screenshots
+<img width="1260" height="914" alt="image" src="https://github.com/user-attachments/assets/ab02fa85-9d49-458b-896c-e23a4a5185ad" />
+
 ## Installation
 
 ### Community plugins
