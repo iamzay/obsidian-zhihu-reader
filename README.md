@@ -119,6 +119,29 @@ Run all checks before submitting a change:
 npm run check
 ```
 
+## Releasing
+
+The release script requires a clean worktree. It synchronizes `package.json`,
+`package-lock.json`, `manifest.json`, and `versions.json`, runs the complete
+check suite, then creates a release commit and an annotated Git tag.
+
+Create a patch release locally:
+
+```bash
+npm run release -- patch
+```
+
+You can also use `minor`, `major`, or an explicit version such as `1.2.3`.
+Add `--push` to push the commit and tag immediately:
+
+```bash
+npm run release -- patch --push
+```
+
+Pushing the tag triggers the GitHub Actions release workflow, which rebuilds
+the plugin, creates artifact attestations, and publishes `main.js`,
+`manifest.json`, and `styles.css` to GitHub Releases.
+
 Project documentation:
 
 - [Product requirements](docs/PRODUCT.md)
