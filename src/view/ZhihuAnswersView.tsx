@@ -48,6 +48,10 @@ import {
   type PreparedAnswer,
   type ReaderScreenActions,
 } from "@/view/reader/ReaderScreen";
+import {
+  readerScrollDistance,
+  resolveReaderShortcut,
+} from "@/view/reader/ReaderKeyboardShortcuts";
 
 export const VIEW_TYPE_ZHIHU_ANSWERS = "zhihu-answers-view";
 export const ZHIHU_READER_ICON = "zhihu-reader";
@@ -104,6 +108,9 @@ export class ZhihuAnswersView extends ItemView {
   private readonly savedPaths = new Map<string, string>();
   private readonly saveWarnings = new Map<string, readonly string[]>();
   private readonly saveErrors = new Map<string, string>();
+  private readonly onReaderKeyDown = (event: KeyboardEvent): void => {
+    this.handleReaderKeyDown(event);
+  };
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -143,6 +150,7 @@ export class ZhihuAnswersView extends ItemView {
 
   override onOpen(): Promise<void> {
     this.root = createRoot(this.contentEl);
+    document.addEventListener("keydown", this.onReaderKeyDown);
     this.unsubscribeSession = this.session.subscribe((snapshot) => {
       const currentAnswerId = snapshot.answers[snapshot.currentIndex]?.id ?? null;
       const shouldResetScroll =
@@ -195,6 +203,7 @@ export class ZhihuAnswersView extends ItemView {
   }
 
   override onClose(): Promise<void> {
+    document.removeEventListener("keydown", this.onReaderKeyDown);
     this.unsubscribeSession?.();
     this.unsubscribeSession = null;
     this.unsubscribeDailyHotList?.();
@@ -547,6 +556,65 @@ export class ZhihuAnswersView extends ItemView {
     };
   }
 
+  private handleReaderKeyDown(event: KeyboardEvent): void {
+    if (
+      this.app.workspace.getActiveViewOfType(ZhihuAnswersView) !== this ||
+      this.snapshot.phase !== "ready" ||
+      this.contentEl.querySelector('[role="dialog"]') !== null
+    ) {
+      return;
+    }
+    const shortcut = resolveReaderShortcut(
+      event,
+      isEditableTarget(event.target),
+    );
+    if (shortcut === null) {
+      return;
+    }
+
+    switch (shortcut) {
+      case "previous-answer":
+        if (!this.hasNetworkAccess() || this.snapshot.currentIndex <= 0) {
+          return;
+        }
+        event.preventDefault();
+        this.session.previous();
+        return;
+      case "next-answer":
+        if (!this.hasNetworkAccess() || !this.canNavigateNext()) {
+          return;
+        }
+        event.preventDefault();
+        void this.session.next();
+        return;
+      case "scroll-down":
+        event.preventDefault();
+        this.scrollReader(1);
+        return;
+      case "scroll-up":
+        event.preventDefault();
+        this.scrollReader(-1);
+    }
+  }
+
+  private canNavigateNext(): boolean {
+    const current = this.snapshot.answers[this.snapshot.currentIndex];
+    const hasQueuedNext =
+      this.snapshot.currentIndex + 1 < this.snapshot.answers.length;
+    return (
+      current !== undefined &&
+      (hasQueuedNext || !this.snapshot.isEnd) &&
+      !this.snapshot.isLoadingNextPage
+    );
+  }
+
+  private scrollReader(direction: 1 | -1): void {
+    this.contentEl.scrollBy({
+      top: direction * readerScrollDistance(this.contentEl.clientHeight),
+      behavior: "smooth",
+    });
+  }
+
   private render(): void {
     this.root?.render(
       <StrictMode>
@@ -603,4 +671,15 @@ export class ZhihuAnswersView extends ItemView {
   private hasNetworkAccess(): boolean {
     return canUseZhihuNetwork(this.authSnapshot);
   }
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+  return (
+    target.closest(
+      'input, textarea, select, [contenteditable="true"], [role="textbox"]',
+    ) !== null
+  );
 }

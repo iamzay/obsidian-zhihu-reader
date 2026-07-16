@@ -142,7 +142,7 @@ export default class ZhihuAnswersPlugin extends Plugin {
     this.settingTab = new ZhihuAnswersSettingTab(this.app, this);
     this.addSettingTab(this.settingTab);
     this.authSession.subscribe((snapshot) => {
-      this.settingTab.display();
+      this.settingTab.refresh();
       for (const leaf of this.app.workspace.getLeavesOfType(
         VIEW_TYPE_ZHIHU_ANSWERS,
       )) {

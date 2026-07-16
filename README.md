@@ -13,6 +13,7 @@ This is an unofficial integration and is not affiliated with Zhihu.
   clipboard.
 - Read one answer at a time and move between answers with previous/next
   controls.
+- Navigate while reading with `H`/`L` and scroll with `J`/`K`.
 - Search answers, browse the daily hot list, read comments, and inspect an
   author's public answers.
 - Keep a local history of successfully opened questions.
@@ -202,6 +203,19 @@ Zhihu Reader/{问题标题}/{作者名} - {回答ID}.md
 | 是否下载图片到 Vault | 关闭 | 仅在保存回答时下载正文图片 |
 
 下载图片开启后，可以选择遵循 Obsidian 的附件设置，或指定独立附件目录。
+
+## 阅读快捷键
+
+当 Zhihu Reader 阅读面板处于活动状态时，可以使用：
+
+| 快捷键 | 操作 |
+| --- | --- |
+| `H` | 上一个回答 |
+| `J` | 向下滚动 |
+| `K` | 向上滚动 |
+| `L` | 下一个回答 |
+
+在输入框、下拉框、可编辑区域、评论抽屉或 Popover 中操作时，阅读快捷键不会生效。
 
 ## 命令
 

@@ -635,6 +635,8 @@ function AnswerToolbarNavigation({
         type="button"
         onClick={actions.previous}
         disabled={disabled || snapshot.currentIndex <= 0}
+        title="上一回答（H）"
+        aria-keyshortcuts="H"
       >
         ← 上一回答
       </button>
@@ -660,9 +662,20 @@ function AnswerToolbarNavigation({
         type="button"
         onClick={actions.next}
         disabled={disabled || !canNext || snapshot.isLoadingNextPage}
+        title="下一回答（L）"
+        aria-keyshortcuts="L"
       >
         {snapshot.isLoadingNextPage ? "加载中…" : "下一回答 →"}
       </button>
+      <span
+        className="zhihu-reader-toolbar__shortcut-hint"
+        title="快捷键：H 上一回答，J 向下滚动，K 向上滚动，L 下一回答"
+        aria-label="阅读快捷键：H 上一回答，J 向下滚动，K 向上滚动，L 下一回答"
+      >
+        <kbd>H</kbd>/<kbd>L</kbd> 切换
+        <span aria-hidden="true"> · </span>
+        <kbd>J</kbd>/<kbd>K</kbd> 滚动
+      </span>
       {snapshot.navigationError !== null && (
         <span
           className="zhihu-reader-toolbar__answer-feedback is-error"

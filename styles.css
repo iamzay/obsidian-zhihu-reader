@@ -96,6 +96,23 @@
   text-align: center;
 }
 
+.zhihu-reader-toolbar__shortcut-hint {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+.zhihu-reader-toolbar__shortcut-hint kbd {
+  padding: 1px 4px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  box-shadow: 0 1px 0 var(--background-modifier-border);
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+}
+
 .zhihu-reader-toolbar__answer-feedback {
   color: var(--text-faint);
   font-size: var(--font-ui-small);
