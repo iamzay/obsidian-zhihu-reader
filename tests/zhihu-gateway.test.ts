@@ -226,6 +226,29 @@ describe("HttpZhihuGateway", () => {
     await expect(request).rejects.toMatchObject({ kind });
   });
 
+  it("notifies the auth session when Zhihu rejects the current login", async () => {
+    const messages: string[] = [];
+    const gateway = new HttpZhihuGateway(
+      new FixtureZhihuTransport(() => ({
+        status: 401,
+        text: JSON.stringify({
+          error: { code: 101, message: "ZERR_NOT_LOGIN" },
+        }),
+      })),
+      {
+        getCookieHeader: () => "z_c0=expired-session",
+        onAuthenticationRequired: (message) => messages.push(message),
+      },
+    );
+
+    await expect(gateway.getAnswer("123")).rejects.toMatchObject({
+      kind: "forbidden",
+    });
+    expect(messages).toEqual([
+      "知乎登录已失效，请前往“设置 → Zhihu Reader”重新登录。",
+    ]);
+  });
+
   it("maps schema changes to a recoverable response error", async () => {
     const gateway = new HttpZhihuGateway(
       new FixtureZhihuTransport(() => ({

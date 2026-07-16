@@ -9,6 +9,10 @@ import type {
   ZhihuTarget,
 } from "@/domain/zhihu";
 import type { ZhihuAuthSnapshot } from "@/auth/types";
+import {
+  canUseZhihuNetwork,
+  zhihuLoginRequirementMessage,
+} from "@/auth/access";
 import type { AuthorAnswerListSnapshot } from "@/author/AuthorAnswerList";
 import type { AnswerCommentListSnapshot } from "@/comments/AnswerCommentList";
 import type { DailyHotListSnapshot } from "@/hotlist/DailyHotList";
@@ -109,10 +113,12 @@ export function ReaderScreen({
   readonly voteState: AnswerVoteState | null;
   readonly actions: ReaderScreenActions;
 }): React.JSX.Element {
+  const hasNetworkAccess = canUseZhihuNetwork(auth);
   return (
     <main className="zhihu-answers">
       <ReaderToolbar
         auth={auth}
+        hasNetworkAccess={hasNetworkAccess}
         onOpenUrl={actions.openUrlModal}
         onRefresh={actions.retry}
         canRefresh={snapshot.target !== null && snapshot.phase !== "loading"}
@@ -128,7 +134,13 @@ export function ReaderScreen({
         isSearchOpen={isSearchOpen}
         searchActions={actions}
       />
-      {snapshot.phase === "idle" && (
+      {!hasNetworkAccess && snapshot.phase === "idle" && (
+        <LoginRequiredState auth={auth} />
+      )}
+      {!hasNetworkAccess && snapshot.phase !== "idle" && (
+        <LoginRequiredBanner auth={auth} />
+      )}
+      {hasNetworkAccess && snapshot.phase === "idle" && (
         <EmptyReaderState
           onOpenUrl={actions.openUrlModal}
           onOpenClipboard={actions.openFromClipboard}
@@ -140,6 +152,7 @@ export function ReaderScreen({
           message={snapshot.errorMessage ?? "加载知乎内容时发生未知错误。"}
           target={snapshot.target}
           onRetry={actions.retry}
+          canRetry={hasNetworkAccess}
         />
       )}
       {snapshot.phase === "ready" && snapshot.question !== null && (
@@ -153,6 +166,7 @@ export function ReaderScreen({
           isCommentsOpen={isCommentsOpen}
           saveState={saveState}
           voteState={voteState}
+          hasNetworkAccess={hasNetworkAccess}
           actions={actions}
         />
       )}
@@ -162,6 +176,7 @@ export function ReaderScreen({
 
 function ReaderToolbar({
   auth,
+  hasNetworkAccess,
   onOpenUrl,
   onRefresh,
   canRefresh,
@@ -178,6 +193,7 @@ function ReaderToolbar({
   searchActions,
 }: {
   readonly auth: ZhihuAuthSnapshot;
+  readonly hasNetworkAccess: boolean;
   readonly onOpenUrl: () => void;
   readonly onRefresh: () => void;
   readonly canRefresh: boolean;
@@ -205,25 +221,39 @@ function ReaderToolbar({
         </span>
       </div>
       <nav className="zhihu-reader-toolbar__actions" aria-label="阅读器工具栏">
-        <button type="button" onClick={onOpenUrl} aria-label="打开知乎链接">
+        <button
+          type="button"
+          onClick={onOpenUrl}
+          disabled={!hasNetworkAccess}
+          title={hasNetworkAccess ? undefined : "登录知乎后打开内容"}
+          aria-label="打开知乎链接"
+        >
           打开链接
         </button>
         <SearchPopover
           snapshot={search}
           isOpen={isSearchOpen}
+          disabled={!hasNetworkAccess}
           actions={searchActions}
         />
         <DailyHotPopover
           snapshot={dailyHotList}
           isOpen={isDailyHotListOpen}
+          disabled={!hasNetworkAccess}
           actions={dailyHotActions}
         />
         <HistoryPopover
           entries={historyEntries}
           isOpen={isHistoryOpen}
+          canOpenEntries={hasNetworkAccess}
           actions={historyActions}
         />
-        <button type="button" onClick={onRefresh} disabled={!canRefresh}>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={!hasNetworkAccess || !canRefresh}
+          title={hasNetworkAccess ? undefined : "登录知乎后刷新"}
+        >
           刷新
         </button>
         <AuthIndicator auth={auth} />
@@ -232,9 +262,41 @@ function ReaderToolbar({
         <AnswerToolbarNavigation
           snapshot={snapshot}
           actions={answerActions}
+          disabled={!hasNetworkAccess}
         />
       )}
     </header>
+  );
+}
+
+function LoginRequiredState({
+  auth,
+}: {
+  readonly auth: ZhihuAuthSnapshot;
+}): React.JSX.Element {
+  return (
+    <section className="zhihu-answers__empty-state zhihu-login-required">
+      <div className="zhihu-answers__mark" aria-hidden="true">
+        知
+      </div>
+      <span className="zhihu-reader-status__eyebrow">需要登录</span>
+      <h2>请先登录知乎</h2>
+      <p>{zhihuLoginRequirementMessage(auth)}</p>
+      <small>登录后即可阅读问题和回答、搜索及查看每日热榜。</small>
+    </section>
+  );
+}
+
+function LoginRequiredBanner({
+  auth,
+}: {
+  readonly auth: ZhihuAuthSnapshot;
+}): React.JSX.Element {
+  return (
+    <div className="zhihu-login-required-banner" role="status">
+      <strong>知乎登录不可用</strong>
+      <span>{zhihuLoginRequirementMessage(auth)}</span>
+    </div>
   );
 }
 
@@ -282,10 +344,12 @@ function ReaderErrorState({
   message,
   target,
   onRetry,
+  canRetry,
 }: {
   readonly message: string;
   readonly target: ZhihuTarget;
   readonly onRetry: () => void;
+  readonly canRetry: boolean;
 }): React.JSX.Element {
   return (
     <section className="zhihu-reader-shell zhihu-reader-error" role="alert">
@@ -293,7 +357,12 @@ function ReaderErrorState({
       <h2>暂时无法显示知乎内容</h2>
       <p>{message}</p>
       <div className="zhihu-reader-error__actions">
-        <button className="mod-cta" type="button" onClick={onRetry}>
+        <button
+          className="mod-cta"
+          type="button"
+          onClick={onRetry}
+          disabled={!canRetry}
+        >
           重试
         </button>
         <button type="button" onClick={() => openTargetInBrowser(target)}>
@@ -315,6 +384,7 @@ function ReaderReadyState({
   actions,
   saveState,
   voteState,
+  hasNetworkAccess,
 }: {
   readonly app: App;
   readonly snapshot: ReaderSnapshot;
@@ -326,6 +396,7 @@ function ReaderReadyState({
   readonly actions: ReaderScreenActions;
   readonly saveState: AnswerSaveState;
   readonly voteState: AnswerVoteState | null;
+  readonly hasNetworkAccess: boolean;
 }): React.JSX.Element {
   return (
     <div className="zhihu-reader-shell">
@@ -344,6 +415,7 @@ function ReaderReadyState({
           app={app}
           prepared={preparedAnswer}
           authorAnswerList={authorAnswerList}
+          hasNetworkAccess={hasNetworkAccess}
           saveState={saveState}
           voteState={voteState ?? undefined}
           actions={actions}
@@ -351,7 +423,7 @@ function ReaderReadyState({
           onOpenNote={actions.openNote}
         />
       )}
-      {isCommentsOpen && preparedAnswer !== null && (
+      {hasNetworkAccess && isCommentsOpen && preparedAnswer !== null && (
         <AnswerCommentsDialog
           app={app}
           answer={preparedAnswer.answer}
@@ -411,6 +483,7 @@ function AnswerCard({
   authorAnswerList,
   saveState,
   voteState,
+  hasNetworkAccess,
   actions,
   onSave,
   onOpenNote,
@@ -420,6 +493,7 @@ function AnswerCard({
   readonly authorAnswerList: AuthorAnswerListSnapshot;
   readonly saveState: AnswerSaveState;
   readonly voteState?: AnswerVoteState;
+  readonly hasNetworkAccess: boolean;
   readonly actions: ReaderScreenActions;
   readonly onSave: () => void;
   readonly onOpenNote: (path: string) => void;
@@ -431,6 +505,7 @@ function AnswerCard({
         <AuthorAnswersPopover
           author={answer.author}
           snapshot={authorAnswerList}
+          disabled={!hasNetworkAccess}
           actions={actions}
         />
         <div className="zhihu-answer-author__identity">
@@ -442,7 +517,8 @@ function AnswerCard({
             className={voteState?.isVoted === true ? "is-voted" : undefined}
             type="button"
             onClick={() => actions.toggleAnswerVote(answer)}
-            disabled={voteState?.isSubmitting === true}
+            disabled={!hasNetworkAccess || voteState?.isSubmitting === true}
+            title={hasNetworkAccess ? undefined : "登录知乎后赞同回答"}
             aria-pressed={voteState?.isVoted ?? answer.isVoted}
             aria-label={
               voteState?.isVoted === true
@@ -459,6 +535,8 @@ function AnswerCard({
           <button
             type="button"
             onClick={() => actions.openComments(answer.id)}
+            disabled={!hasNetworkAccess}
+            title={hasNetworkAccess ? undefined : "登录知乎后阅读评论"}
             aria-label={`阅读 ${answer.commentCount} 条评论`}
           >
             {answer.commentCount} 评论
@@ -535,9 +613,11 @@ function AnswerCard({
 function AnswerToolbarNavigation({
   snapshot,
   actions,
+  disabled,
 }: {
   readonly snapshot: ReaderSnapshot;
   readonly actions: ReaderScreenActions;
+  readonly disabled: boolean;
 }): React.JSX.Element {
   const current = snapshot.answers[snapshot.currentIndex];
   const hasQueuedNext = snapshot.currentIndex + 1 < snapshot.answers.length;
@@ -554,7 +634,7 @@ function AnswerToolbarNavigation({
       <button
         type="button"
         onClick={actions.previous}
-        disabled={snapshot.currentIndex <= 0}
+        disabled={disabled || snapshot.currentIndex <= 0}
       >
         ← 上一回答
       </button>
@@ -566,6 +646,7 @@ function AnswerToolbarNavigation({
         <select
           aria-label="回答排序"
           value={snapshot.order}
+          disabled={disabled}
           onChange={(event) =>
             actions.changeOrder(event.target.value as AnswerOrder)
           }
@@ -578,7 +659,7 @@ function AnswerToolbarNavigation({
         className="mod-cta"
         type="button"
         onClick={actions.next}
-        disabled={!canNext || snapshot.isLoadingNextPage}
+        disabled={disabled || !canNext || snapshot.isLoadingNextPage}
       >
         {snapshot.isLoadingNextPage ? "加载中…" : "下一回答 →"}
       </button>
@@ -589,7 +670,11 @@ function AnswerToolbarNavigation({
           title={snapshot.navigationError}
         >
           <span>下一篇加载失败</span>
-          <button type="button" onClick={actions.retryNavigation}>
+          <button
+            type="button"
+            onClick={actions.retryNavigation}
+            disabled={disabled}
+          >
             重试
           </button>
         </span>

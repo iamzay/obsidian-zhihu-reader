@@ -12,6 +12,7 @@ import type {
   ZhihuTarget,
 } from "@/domain/zhihu";
 import type { ZhihuAuthSnapshot } from "@/auth/types";
+import { canUseZhihuNetwork } from "@/auth/access";
 import {
   AuthorAnswerList,
   type AuthorAnswerListSnapshot,
@@ -218,6 +219,9 @@ export class ZhihuAnswersView extends ItemView {
   }
 
   async openTarget(target: ZhihuTarget): Promise<void> {
+    if (!this.hasNetworkAccess()) {
+      return;
+    }
     this.shouldRecordQuery = true;
     await this.session.open(target);
   }
@@ -236,6 +240,9 @@ export class ZhihuAnswersView extends ItemView {
   }
 
   openDailyHotListPopover(): void {
+    if (!this.hasNetworkAccess()) {
+      return;
+    }
     this.isHistoryOpen = false;
     this.isSearchOpen = false;
     this.isCommentsOpen = false;
@@ -245,6 +252,9 @@ export class ZhihuAnswersView extends ItemView {
   }
 
   openSearchPopover(): void {
+    if (!this.hasNetworkAccess()) {
+      return;
+    }
     this.isHistoryOpen = false;
     this.isDailyHotListOpen = false;
     this.isCommentsOpen = false;
@@ -254,6 +264,11 @@ export class ZhihuAnswersView extends ItemView {
 
   setAuthSnapshot(snapshot: ZhihuAuthSnapshot): void {
     this.authSnapshot = snapshot;
+    if (!this.hasNetworkAccess()) {
+      this.isDailyHotListOpen = false;
+      this.isSearchOpen = false;
+      this.isCommentsOpen = false;
+    }
     this.render();
   }
 
@@ -331,22 +346,34 @@ export class ZhihuAnswersView extends ItemView {
     return {
       ...this.actions,
       retry: () => {
-        if (this.snapshot.target !== null) {
+        if (this.hasNetworkAccess() && this.snapshot.target !== null) {
           void this.session.open(this.snapshot.target);
         }
       },
-      previous: () => this.session.previous(),
+      previous: () => {
+        if (this.hasNetworkAccess()) {
+          this.session.previous();
+        }
+      },
       next: () => {
-        void this.session.next();
+        if (this.hasNetworkAccess()) {
+          void this.session.next();
+        }
       },
       changeOrder: (order: AnswerOrder) => {
-        void this.session.changeOrder(order);
+        if (this.hasNetworkAccess()) {
+          void this.session.changeOrder(order);
+        }
       },
       retryNavigation: () => {
-        void this.session.retryNavigation();
+        if (this.hasNetworkAccess()) {
+          void this.session.retryNavigation();
+        }
       },
       toggleAnswerVote: (answer: AnswerDocument) => {
-        void this.answerVote.toggle(answer);
+        if (this.hasNetworkAccess()) {
+          void this.answerVote.toggle(answer);
+        }
       },
       toggleHistory: () => {
         this.isHistoryOpen = !this.isHistoryOpen;
@@ -361,6 +388,9 @@ export class ZhihuAnswersView extends ItemView {
         this.render();
       },
       openHistoryEntry: (questionId: string) => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
         this.isHistoryOpen = false;
         void this.openTarget({ type: "question", questionId });
       },
@@ -371,6 +401,9 @@ export class ZhihuAnswersView extends ItemView {
         this.actions.clearHistory();
       },
       toggleDailyHotList: () => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
         this.isDailyHotListOpen = !this.isDailyHotListOpen;
         if (this.isDailyHotListOpen) {
           this.isHistoryOpen = false;
@@ -384,13 +417,21 @@ export class ZhihuAnswersView extends ItemView {
         this.render();
       },
       refreshDailyHotList: () => {
-        void this.dailyHotList.load(true);
+        if (this.hasNetworkAccess()) {
+          void this.dailyHotList.load(true);
+        }
       },
       openDailyHotItem: (questionId: string) => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
         this.isDailyHotListOpen = false;
         void this.openTarget({ type: "question", questionId });
       },
       toggleSearch: () => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
         this.isSearchOpen = !this.isSearchOpen;
         if (this.isSearchOpen) {
           this.isHistoryOpen = false;
@@ -404,15 +445,24 @@ export class ZhihuAnswersView extends ItemView {
         this.render();
       },
       searchAnswers: (query: string) => {
-        void this.search.search(query);
+        if (this.hasNetworkAccess()) {
+          void this.search.search(query);
+        }
       },
       loadMoreSearchAnswers: () => {
-        void this.search.loadMore();
+        if (this.hasNetworkAccess()) {
+          void this.search.loadMore();
+        }
       },
       retrySearchAnswers: () => {
-        void this.search.retry();
+        if (this.hasNetworkAccess()) {
+          void this.search.retry();
+        }
       },
       openSearchAnswer: (result: SearchAnswerResult) => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
         this.isSearchOpen = false;
         void this.openTarget({
           type: "answer",
@@ -421,15 +471,24 @@ export class ZhihuAnswersView extends ItemView {
         });
       },
       showAuthorAnswers: (author) => {
-        void this.authorAnswerList.showAuthor(author);
+        if (this.hasNetworkAccess()) {
+          void this.authorAnswerList.showAuthor(author);
+        }
       },
       loadMoreAuthorAnswers: () => {
-        void this.authorAnswerList.loadMore();
+        if (this.hasNetworkAccess()) {
+          void this.authorAnswerList.loadMore();
+        }
       },
       retryAuthorAnswers: () => {
-        void this.authorAnswerList.retry();
+        if (this.hasNetworkAccess()) {
+          void this.authorAnswerList.retry();
+        }
       },
       openAuthorAnswer: (answer) => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
         void this.openTarget({
           type: "answer",
           answerId: answer.answerId,
@@ -437,6 +496,9 @@ export class ZhihuAnswersView extends ItemView {
         });
       },
       openComments: (answerId: string) => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
         this.isCommentsOpen = true;
         this.isHistoryOpen = false;
         this.isDailyHotListOpen = false;
@@ -449,22 +511,34 @@ export class ZhihuAnswersView extends ItemView {
         this.render();
       },
       changeCommentOrder: (order: CommentOrder) => {
-        void this.answerCommentList.changeOrder(order);
+        if (this.hasNetworkAccess()) {
+          void this.answerCommentList.changeOrder(order);
+        }
       },
       loadMoreComments: () => {
-        void this.answerCommentList.loadMore();
+        if (this.hasNetworkAccess()) {
+          void this.answerCommentList.loadMore();
+        }
       },
       retryComments: () => {
-        void this.answerCommentList.retry();
+        if (this.hasNetworkAccess()) {
+          void this.answerCommentList.retry();
+        }
       },
       toggleCommentReplies: (comment: ZhihuComment) => {
-        void this.answerCommentList.toggleReplies(comment);
+        if (this.hasNetworkAccess()) {
+          void this.answerCommentList.toggleReplies(comment);
+        }
       },
       loadMoreCommentReplies: (commentId: string) => {
-        void this.answerCommentList.loadMoreReplies(commentId);
+        if (this.hasNetworkAccess()) {
+          void this.answerCommentList.loadMoreReplies(commentId);
+        }
       },
       retryCommentReplies: (commentId: string) => {
-        void this.answerCommentList.retryReplies(commentId);
+        if (this.hasNetworkAccess()) {
+          void this.answerCommentList.retryReplies(commentId);
+        }
       },
       saveCurrentAnswer: () => {
         void this.saveCurrentAnswer();
@@ -524,5 +598,9 @@ export class ZhihuAnswersView extends ItemView {
   private currentVoteState(): AnswerVoteState | null {
     const answer = this.snapshot.answers[this.snapshot.currentIndex];
     return answer === undefined ? null : this.answerVote.snapshot(answer);
+  }
+
+  private hasNetworkAccess(): boolean {
+    return canUseZhihuNetwork(this.authSnapshot);
   }
 }

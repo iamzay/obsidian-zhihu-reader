@@ -100,6 +100,36 @@ describe("ZhihuAuthSession", () => {
     expect(JSON.stringify(auth.snapshot())).not.toContain("session-secret");
   });
 
+  it("invalidates an authenticated session after an API authentication failure", async () => {
+    const persistence = new MemoryAuthPersistence();
+    const auth = new ZhihuAuthSession(
+      new FixtureZhihuTransport(() =>
+        ok(JSON.stringify({
+          id: "person-id",
+          name: "测试用户",
+          url_token: "test-user",
+        }))),
+      persistence,
+      renderQr,
+      new ImmediateScheduler(),
+    );
+    await auth.verifyStoredSession({
+      cookies: { z_c0: "session-secret" },
+      profile: null,
+      verifiedAt: 1,
+    });
+    expect(auth.snapshot().phase).toBe("authenticated");
+
+    await auth.invalidateSession("知乎登录已失效，请重新登录。");
+
+    expect(auth.snapshot()).toMatchObject({
+      phase: "expired",
+      message: "知乎登录已失效，请重新登录。",
+    });
+    expect(auth.getCookieHeader()).toBeUndefined();
+    expect(persistence.value.cookies).toEqual({});
+  });
+
   it("surfaces risk control and stops polling", async () => {
     const auth = new ZhihuAuthSession(
       loginTransport(() => ({

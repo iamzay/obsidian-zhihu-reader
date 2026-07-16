@@ -133,7 +133,7 @@ export class ZhihuAuthSession {
         this.state = {
           ...anonymousSnapshot(),
           phase: "expired",
-          message: "知乎登录已过期，已切换为匿名阅读。",
+          message: "知乎登录已过期，请重新登录后继续使用阅读功能。",
         };
       } else {
         await this.acceptAuthenticated(jar, profile);
@@ -145,7 +145,7 @@ export class ZhihuAuthSession {
       this.state = {
         ...anonymousSnapshot(),
         phase: "error",
-        message: `登录状态验证失败，当前使用匿名阅读：${errorMessage(error)}`,
+        message: `登录状态验证失败，请重新登录：${errorMessage(error)}`,
       };
     }
     this.emit();
@@ -223,6 +223,19 @@ export class ZhihuAuthSession {
     this.pendingRiskControlJar = null;
     await this.persistence.save(emptyPersistedAuth());
     this.state = anonymousSnapshot();
+    this.emit();
+  }
+
+  async invalidateSession(message = "知乎登录已失效，请重新登录。"): Promise<void> {
+    this.generation += 1;
+    this.activeJar = new CookieJar();
+    this.pendingRiskControlJar = null;
+    await this.persistence.save(emptyPersistedAuth());
+    this.state = {
+      ...anonymousSnapshot(),
+      phase: "expired",
+      message,
+    };
     this.emit();
   }
 

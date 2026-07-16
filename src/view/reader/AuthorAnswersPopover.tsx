@@ -16,10 +16,12 @@ export interface AuthorAnswersPopoverActions {
 export function AuthorAnswersPopover({
   author,
   snapshot,
+  disabled,
   actions,
 }: {
   readonly author: ZhihuAuthor;
   readonly snapshot: AuthorAnswerListSnapshot;
+  readonly disabled: boolean;
   readonly actions: AuthorAnswersPopoverActions;
 }): React.JSX.Element {
   const identifier = author.urlToken ?? author.id;
@@ -37,6 +39,12 @@ export function AuthorAnswersPopover({
   useEffect(() => {
     setIsOpen(false);
   }, [identifier]);
+
+  useEffect(() => {
+    if (disabled) {
+      setIsOpen(false);
+    }
+  }, [disabled]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -89,10 +97,15 @@ export function AuthorAnswersPopover({
       <button
         className="zhihu-author-answers-trigger"
         type="button"
+        disabled={disabled}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label={`查看 ${author.name} 的回答`}
-        title={`查看 ${author.name} 的回答`}
+        title={
+          disabled
+            ? "登录知乎后查看作者回答"
+            : `查看 ${author.name} 的回答`
+        }
         onClick={() => {
           if (isOpen) {
             closeNow();
@@ -103,7 +116,7 @@ export function AuthorAnswersPopover({
       >
         <AuthorAvatar author={author} />
       </button>
-      {isOpen && (
+      {isOpen && !disabled && (
         <div
           className="zhihu-author-answers-popover"
           role="dialog"

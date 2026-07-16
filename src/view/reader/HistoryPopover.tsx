@@ -13,10 +13,12 @@ export interface HistoryPopoverActions {
 export function HistoryPopover({
   entries,
   isOpen,
+  canOpenEntries,
   actions,
 }: {
   readonly entries: readonly QuestionHistoryEntry[];
   readonly isOpen: boolean;
+  readonly canOpenEntries: boolean;
   readonly actions: HistoryPopoverActions;
 }): React.JSX.Element {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -114,8 +116,13 @@ export function HistoryPopover({
                   <button
                     className="zhihu-history-popover__title"
                     type="button"
+                    disabled={!canOpenEntries}
                     onClick={() => actions.openHistoryEntry(entry.questionId)}
-                    title={entry.questionTitle}
+                    title={
+                      canOpenEntries
+                        ? entry.questionTitle
+                        : "登录知乎后重新打开该问题"
+                    }
                   >
                     <span className="zhihu-history-popover__content">
                       <strong>{entry.questionTitle}</strong>

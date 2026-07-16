@@ -15,10 +15,12 @@ export interface SearchPopoverActions {
 export function SearchPopover({
   snapshot,
   isOpen,
+  disabled,
   actions,
 }: {
   readonly snapshot: ZhihuAnswerSearchSnapshot;
   readonly isOpen: boolean;
+  readonly disabled: boolean;
   readonly actions: SearchPopoverActions;
 }): React.JSX.Element {
   const [query, setQuery] = useState(snapshot.query);
@@ -81,12 +83,14 @@ export function SearchPopover({
         ref={triggerRef}
         type="button"
         onClick={actions.toggleSearch}
+        disabled={disabled}
+        title={disabled ? "登录知乎后使用搜索" : undefined}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
         搜索
       </button>
-      {isOpen && (
+      {isOpen && !disabled && (
         <div
           className="zhihu-search-popover"
           ref={panelRef}

@@ -1,6 +1,10 @@
 import { addIcon, Notice, Plugin, TFile } from "obsidian";
 
 import { renderQrCodeDataUrl } from "@/auth/QrCodeRenderer";
+import {
+  canUseZhihuNetwork,
+  zhihuLoginRequirementMessage,
+} from "@/auth/access";
 import { ZhihuAuthSession } from "@/auth/ZhihuAuthSession";
 import type { PersistedZhihuAuth, ZhihuAuthSnapshot } from "@/auth/types";
 import type { AnswerDocument, ZhihuTarget } from "@/domain/zhihu";
@@ -76,6 +80,9 @@ export default class ZhihuAnswersPlugin extends Plugin {
     );
     const gateway = new HttpZhihuGateway(transport, {
       getCookieHeader: () => this.authSession.getCookieHeader(),
+      onAuthenticationRequired: (message) => {
+        void this.authSession.invalidateSession(message);
+      },
     });
     this.answerNoteWriter = new AnswerNoteWriter(
       new ObsidianAnswerNoteStorage(this.app),
@@ -355,6 +362,9 @@ export default class ZhihuAnswersPlugin extends Plugin {
   }
 
   private openUrlModal(initialValue = ""): void {
+    if (!this.ensureNetworkAccess()) {
+      return;
+    }
     new ZhihuUrlModal(
       this.app,
       this.targetParser,
@@ -366,6 +376,9 @@ export default class ZhihuAnswersPlugin extends Plugin {
   }
 
   private async openFromClipboard(): Promise<void> {
+    if (!this.ensureNetworkAccess()) {
+      return;
+    }
     let text: string;
     try {
       text = await navigator.clipboard.readText();
@@ -390,6 +403,9 @@ export default class ZhihuAnswersPlugin extends Plugin {
   }
 
   private async activateView(target?: ZhihuTarget): Promise<void> {
+    if (target !== undefined && !this.ensureNetworkAccess()) {
+      return;
+    }
     const existingLeaf = this.app.workspace.getLeavesOfType(
       VIEW_TYPE_ZHIHU_ANSWERS,
     )[0];
@@ -417,6 +433,9 @@ export default class ZhihuAnswersPlugin extends Plugin {
   }
 
   private async showDailyHotList(): Promise<void> {
+    if (!this.ensureNetworkAccess()) {
+      return;
+    }
     await this.activateView();
     const leaf = this.app.workspace.getLeavesOfType(
       VIEW_TYPE_ZHIHU_ANSWERS,
@@ -427,6 +446,9 @@ export default class ZhihuAnswersPlugin extends Plugin {
   }
 
   private async showSearch(): Promise<void> {
+    if (!this.ensureNetworkAccess()) {
+      return;
+    }
     await this.activateView();
     const leaf = this.app.workspace.getLeavesOfType(
       VIEW_TYPE_ZHIHU_ANSWERS,
@@ -434,6 +456,15 @@ export default class ZhihuAnswersPlugin extends Plugin {
     if (leaf?.view instanceof ZhihuAnswersView) {
       leaf.view.openSearchPopover();
     }
+  }
+
+  private ensureNetworkAccess(): boolean {
+    const auth = this.authSession.snapshot();
+    if (canUseZhihuNetwork(auth)) {
+      return true;
+    }
+    new Notice(zhihuLoginRequirementMessage(auth));
+    return false;
   }
 }
 

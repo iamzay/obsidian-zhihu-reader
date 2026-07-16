@@ -12,10 +12,12 @@ export interface DailyHotPopoverActions {
 export function DailyHotPopover({
   snapshot,
   isOpen,
+  disabled,
   actions,
 }: {
   readonly snapshot: DailyHotListSnapshot;
   readonly isOpen: boolean;
+  readonly disabled: boolean;
   readonly actions: DailyHotPopoverActions;
 }): React.JSX.Element {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -70,12 +72,14 @@ export function DailyHotPopover({
         ref={triggerRef}
         type="button"
         onClick={actions.toggleDailyHotList}
+        disabled={disabled}
+        title={disabled ? "登录知乎后查看每日热榜" : undefined}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
         每日热榜
       </button>
-      {isOpen && (
+      {isOpen && !disabled && (
         <div
           className="zhihu-hot-popover"
           ref={panelRef}

@@ -221,14 +221,14 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
 function authStatusText(phase: string): string {
   switch (phase) {
     case "expired":
-      return "登录已过期，当前使用匿名阅读。";
+      return "登录已过期，请重新登录后继续使用阅读功能。";
     case "cancelled":
       return "已取消登录。";
     case "risk-control":
       return "知乎要求先完成网络环境验证。";
     case "error":
-      return "登录发生错误，匿名阅读仍可使用。";
+      return "登录发生错误，请重新登录后继续使用阅读功能。";
     default:
-      return "当前未登录；公开内容仍可匿名阅读。";
+      return "当前未登录；请先登录知乎再使用阅读功能。";
   }
 }

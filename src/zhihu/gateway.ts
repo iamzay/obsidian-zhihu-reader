@@ -92,11 +92,13 @@ export interface ZhihuGateway {
 export interface HttpZhihuGatewayOptions {
   readonly getCookieHeader?: () => string | undefined;
   readonly userAgent?: string;
+  readonly onAuthenticationRequired?: (message: string) => void;
 }
 
 export class HttpZhihuGateway implements ZhihuGateway {
   private readonly getCookieHeader: () => string | undefined;
   private readonly userAgent: string;
+  private readonly onAuthenticationRequired: (message: string) => void;
 
   constructor(
     private readonly transport: ZhihuTransport,
@@ -104,6 +106,8 @@ export class HttpZhihuGateway implements ZhihuGateway {
   ) {
     this.getCookieHeader = options.getCookieHeader ?? (() => undefined);
     this.userAgent = options.userAgent ?? ZHIHU_DESKTOP_USER_AGENT;
+    this.onAuthenticationRequired =
+      options.onAuthenticationRequired ?? (() => undefined);
   }
 
   async getQuestion(questionId: string): Promise<QuestionSummary> {
@@ -280,11 +284,20 @@ export class HttpZhihuGateway implements ZhihuGateway {
       );
     }
 
+    if (isAuthenticationResponse(response.status, response.text)) {
+      this.onAuthenticationRequired(
+        "知乎登录已失效，请前往“设置 → Zhihu Reader”重新登录。",
+      );
+    }
+
     switch (response.status) {
+      case 401:
       case 403:
         throw new ZhihuGatewayError(
           "forbidden",
-          "该内容暂时无法访问，登录后可能可以阅读。",
+          response.status === 401
+            ? "知乎登录已失效，请重新登录。"
+            : "该内容暂时无法访问，登录后可能可以阅读。",
         );
       case 404:
         throw new ZhihuGatewayError(
@@ -308,10 +321,35 @@ export class HttpZhihuGateway implements ZhihuGateway {
   }
 }
 
+function isAuthenticationResponse(status: number, text: string): boolean {
+  if (status === 401) {
+    return true;
+  }
+  try {
+    const payload = JSON.parse(text) as {
+      readonly error?: {
+        readonly code?: string | number;
+        readonly need_login?: boolean;
+      };
+    };
+    const code = String(payload.error?.code ?? "");
+    return (
+      payload.error?.need_login === true ||
+      code === "101" ||
+      code === "40352" ||
+      code === "40353"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function responseError(error: unknown): ZhihuGatewayError {
   if (error instanceof ZhihuApiResponseError) {
     return new ZhihuGatewayError(
-      error.code === "101" ? "forbidden" : "response",
+      ["101", "40352", "40353"].includes(error.code)
+        ? "forbidden"
+        : "response",
       error.message,
       { cause: error },
     );
