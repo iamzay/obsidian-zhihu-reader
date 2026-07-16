@@ -162,6 +162,21 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
       cls: "zhihu-settings-auth",
       attr: { "aria-live": "polite" },
     });
+    const webViewerAvailability =
+      this.zhihuPlugin.getWebViewerAvailability();
+    const webViewerStatus = webViewerAvailability === "enabled"
+      ? "已启用"
+      : webViewerAvailability === "unsupported"
+        ? "移动端不可用"
+        : "尚未启用";
+
+    new Setting(authSection)
+      .setName("登录前准备")
+      .setDesc(
+        webViewerAvailability === "unsupported"
+          ? "Web viewer 仅支持桌面端，因此推荐的网页登录在移动端不可用；当前仍可尝试二维码 API 登录。"
+          : `两种登录方式都需要先在“设置 → 核心插件”中启用 Web viewer（网页浏览器）。当前状态：${webViewerStatus}。`,
+      );
     authSection.createEl("p", {
       text: auth.message ?? authStatusText(auth.phase),
     });
@@ -190,13 +205,14 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
 
     if (
       auth.phase === "creating-qr" ||
+      auth.phase === "waiting-web-login" ||
       auth.phase === "waiting-scan" ||
       auth.phase === "waiting-confirm" ||
       auth.phase === "verifying"
     ) {
       new Setting(authSection).addButton((button) =>
         button.setButtonText("取消").onClick(() => {
-          this.zhihuPlugin.cancelQrLogin();
+          this.zhihuPlugin.cancelLogin();
         }),
       );
       return;
@@ -210,11 +226,37 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
       );
     }
 
-    new Setting(authSection).addButton((button) =>
-      button.setButtonText("生成登录二维码").setCta().onClick(() => {
-        void this.zhihuPlugin.startQrLogin();
-      }),
-    );
+    new Setting(authSection)
+      .setName("网页登录（推荐）")
+      .setDesc(
+        "请在 Obsidian Web viewer 中打开知乎登录页并登录。",
+      )
+      .addButton((button) =>
+        button
+          .setButtonText(
+            webViewerAvailability === "unsupported"
+              ? "仅桌面端可用"
+              : webViewerAvailability === "disabled"
+                ? "请先启用 Web viewer"
+                : "打开网页登录",
+          )
+          .setCta()
+          .setDisabled(webViewerAvailability !== "enabled")
+          .onClick(() => {
+            void this.zhihuPlugin.startWebViewerLogin();
+          }),
+      );
+
+    new Setting(authSection)
+      .setName("二维码 API 登录")
+      .setDesc(
+        "使用插件当前的二维码接口完成登录，作为网页登录不可用时的备用方式；开始前同样请确认已启用 Web viewer 核心插件。",
+      )
+      .addButton((button) =>
+        button.setButtonText("生成登录二维码").onClick(() => {
+          void this.zhihuPlugin.startQrLogin();
+        }),
+      );
   }
 }
 
@@ -224,6 +266,8 @@ function authStatusText(phase: string): string {
       return "登录已过期，请重新登录后继续使用阅读功能。";
     case "cancelled":
       return "已取消登录。";
+    case "waiting-web-login":
+      return "请在 Web viewer 中完成知乎登录。";
     case "risk-control":
       return "知乎要求先完成网络环境验证。";
     case "error":

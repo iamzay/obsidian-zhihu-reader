@@ -83,6 +83,7 @@ export class ZhihuAuthSession {
   private readonly listeners = new Set<(snapshot: ZhihuAuthSnapshot) => void>();
   private activeJar = new CookieJar();
   private pendingRiskControlJar: CookieJar | null = null;
+  private webLoginAbortController: AbortController | null = null;
   private generation = 0;
   private state: ZhihuAuthSnapshot = anonymousSnapshot();
 
@@ -152,6 +153,8 @@ export class ZhihuAuthSession {
   }
 
   async startQrLogin(): Promise<void> {
+    this.webLoginAbortController?.abort();
+    this.webLoginAbortController = null;
     const generation = ++this.generation;
     this.state = {
       ...anonymousSnapshot(),
@@ -207,17 +210,21 @@ export class ZhihuAuthSession {
   }
 
   cancel(): void {
+    this.webLoginAbortController?.abort();
+    this.webLoginAbortController = null;
     this.generation += 1;
     this.pendingRiskControlJar = null;
     this.state = {
       ...anonymousSnapshot(),
       phase: "cancelled",
-      message: "已取消二维码登录。",
+      message: "已取消登录。",
     };
     this.emit();
   }
 
   async logout(): Promise<void> {
+    this.webLoginAbortController?.abort();
+    this.webLoginAbortController = null;
     this.generation += 1;
     this.activeJar = new CookieJar();
     this.pendingRiskControlJar = null;
@@ -227,6 +234,8 @@ export class ZhihuAuthSession {
   }
 
   async invalidateSession(message = "知乎登录已失效，请重新登录。"): Promise<void> {
+    this.webLoginAbortController?.abort();
+    this.webLoginAbortController = null;
     this.generation += 1;
     this.activeJar = new CookieJar();
     this.pendingRiskControlJar = null;
@@ -240,9 +249,65 @@ export class ZhihuAuthSession {
   }
 
   dispose(): void {
+    this.webLoginAbortController?.abort();
+    this.webLoginAbortController = null;
     this.generation += 1;
     this.pendingRiskControlJar = null;
     this.listeners.clear();
+  }
+
+  async startWebViewerLogin(
+    collectCookies: (
+      signal: AbortSignal,
+    ) => Promise<Readonly<Record<string, string>>>,
+  ): Promise<void> {
+    this.webLoginAbortController?.abort();
+    const controller = new AbortController();
+    this.webLoginAbortController = controller;
+    const generation = ++this.generation;
+    this.state = {
+      ...anonymousSnapshot(),
+      phase: "waiting-web-login",
+      message: "请在 Web viewer 中完成知乎登录。",
+    };
+    this.emit();
+
+    try {
+      const cookies = await collectCookies(controller.signal);
+      if (!this.isCurrent(generation)) {
+        return;
+      }
+      this.state = {
+        ...anonymousSnapshot(),
+        phase: "verifying",
+        message: "正在验证 Web viewer 登录状态…",
+      };
+      this.emit();
+      const jar = new CookieJar(cookies);
+      const profile = await this.verify(jar);
+      if (profile === null) {
+        throw new Error("未能验证 Web viewer 中的知乎登录状态。");
+      }
+      if (!this.isCurrent(generation)) {
+        return;
+      }
+      await this.acceptAuthenticated(jar, profile);
+      this.emit();
+    } catch (error: unknown) {
+      if (!this.isCurrent(generation)) {
+        return;
+      }
+      this.state = {
+        ...anonymousSnapshot(),
+        phase: "error",
+        message: `网页登录失败：${errorMessage(error)}`,
+      };
+      this.emit();
+    } finally {
+      if (this.webLoginAbortController === controller) {
+        this.webLoginAbortController = null;
+      }
+    }
   }
 
   private async poll(

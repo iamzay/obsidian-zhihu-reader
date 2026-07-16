@@ -11,6 +11,7 @@ export function zhihuLoginRequirementMessage(
     case "expired":
       return "知乎登录已过期，请前往“设置 → Zhihu Reader”重新登录。";
     case "creating-qr":
+    case "waiting-web-login":
     case "waiting-scan":
     case "waiting-confirm":
     case "verifying":

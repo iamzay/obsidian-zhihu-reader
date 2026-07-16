@@ -269,7 +269,9 @@ tests/zhihu-schemas.test.ts
 实现内容：
 
 - 在 `ZhihuGateway` 内部注入认证状态，不让 UI 拼请求头。
-- 设置页提供二维码登录、状态展示和退出。
+- 设置页提供推荐的 Web viewer 网页登录和备用二维码 API 登录、状态展示及退出。
+- Web viewer 登录打开知乎登录页，从对应 Electron session 读取 `zhihu.com` Cookie，并复用现有 `/api/v4/me` 验证和持久化。
+- 两种登录方式都提示先启用 Web viewer；推荐方式在未启用或移动端时禁用。
 - Cookie 只保存在插件数据中，日志全部脱敏。
 - 插件启动时验证会话；过期后提示并禁用新的知乎网络请求。
 - 退出清除认证信息，不删除历史、缓存或笔记。

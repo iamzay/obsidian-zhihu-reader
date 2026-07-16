@@ -15,6 +15,7 @@ export type ZhihuAuthPhase =
   | "anonymous"
   | "verifying"
   | "creating-qr"
+  | "waiting-web-login"
   | "waiting-scan"
   | "waiting-confirm"
   | "authenticated"

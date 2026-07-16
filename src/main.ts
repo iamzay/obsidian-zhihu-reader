@@ -6,6 +6,10 @@ import {
   zhihuLoginRequirementMessage,
 } from "@/auth/access";
 import { ZhihuAuthSession } from "@/auth/ZhihuAuthSession";
+import {
+  WebViewerZhihuLogin,
+  webViewerAvailability,
+} from "@/auth/WebViewerZhihuLogin";
 import type { PersistedZhihuAuth, ZhihuAuthSnapshot } from "@/auth/types";
 import type { AnswerDocument, ZhihuTarget } from "@/domain/zhihu";
 import { QuestionHistory } from "@/history/QuestionHistory";
@@ -37,6 +41,7 @@ export default class ZhihuAnswersPlugin extends Plugin {
   private dataRepository!: PluginDataRepository;
   private pluginData!: PluginData;
   private authSession!: ZhihuAuthSession;
+  private webViewerLogin!: WebViewerZhihuLogin;
   private settingTab!: ZhihuAnswersSettingTab;
   private dataDiagnostic: string | null = null;
   private questionHistory!: QuestionHistory;
@@ -78,6 +83,7 @@ export default class ZhihuAnswersPlugin extends Plugin {
       },
       renderQrCodeDataUrl,
     );
+    this.webViewerLogin = new WebViewerZhihuLogin(this.app);
     const gateway = new HttpZhihuGateway(transport, {
       getCookieHeader: () => this.authSession.getCookieHeader(),
       onAuthenticationRequired: (message) => {
@@ -233,10 +239,41 @@ export default class ZhihuAnswersPlugin extends Plugin {
   }
 
   startQrLogin(): Promise<void> {
+    const availability = webViewerAvailability(this.app);
+    if (availability === "unsupported") {
+      new Notice(
+        "Web viewer 仅支持桌面端；当前将继续使用二维码 API 登录。",
+      );
+    } else if (availability === "disabled") {
+      new Notice(
+        "请先在“设置 → 核心插件”中启用 Web viewer（网页浏览器）。",
+      );
+    }
     return this.authSession.startQrLogin();
   }
 
-  cancelQrLogin(): void {
+  startWebViewerLogin(): Promise<void> {
+    const availability = webViewerAvailability(this.app);
+    if (availability === "unsupported") {
+      new Notice("Web viewer 仅支持 Obsidian 桌面端。");
+      return Promise.resolve();
+    }
+    if (availability === "disabled") {
+      new Notice(
+        "请先在“设置 → 核心插件”中启用 Web viewer（网页浏览器）。",
+      );
+      return Promise.resolve();
+    }
+    return this.authSession.startWebViewerLogin(
+      async (signal) => await this.webViewerLogin.collectCookies(signal),
+    );
+  }
+
+  getWebViewerAvailability(): "enabled" | "disabled" | "unsupported" {
+    return webViewerAvailability(this.app);
+  }
+
+  cancelLogin(): void {
     this.authSession.cancel();
   }
 

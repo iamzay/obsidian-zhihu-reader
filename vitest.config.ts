@@ -4,6 +4,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": new URL("./src", import.meta.url).pathname,
+      obsidian: new URL("./tests/support/obsidian.ts", import.meta.url).pathname,
     },
   },
   test: {

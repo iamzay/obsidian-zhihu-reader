@@ -73,11 +73,17 @@ https://www.zhihu.com/question/问题ID/answer/回答ID
 
 登录方法：
 
-1. 打开“设置 → Zhihu Reader”。
-2. 在“知乎登录”中点击“生成登录二维码”。
-3. 使用知乎 App 扫码并确认。
+1. 打开“设置 → 核心插件”，启用 **Web viewer（网页浏览器）**。
+2. 打开“设置 → Zhihu Reader”。
+3. 选择一种登录方式：
+   - **网页登录（推荐）**：在 Web viewer 中打开知乎登录页，使用知乎 App 扫码；插件会自动读取当前 Web viewer 的知乎 Cookie 并验证账号。
+   - **二维码 API 登录**：使用插件原有的二维码接口登录，作为备用方案。
+
+两种方式都会在设置页提示先启用 Web viewer。推荐的网页登录依赖 Electron Web viewer，因此只支持 Obsidian 桌面端；移动端可以继续尝试二维码 API 登录。
 
 登录 Cookie 只保存在插件私有数据中，不会写入 Markdown 笔记。可以随时在同一设置页退出登录。
+
+Web viewer 登录会读取其中属于 `zhihu.com` 的 Cookie。Obsidian 官方也提醒，第三方插件能够访问 Web viewer Cookie；请只在你信任本插件源码和安装来源时使用网页登录。
 
 回答顶部的赞同数是可操作按钮：
 

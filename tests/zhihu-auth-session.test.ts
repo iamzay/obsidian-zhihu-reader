@@ -130,6 +130,66 @@ describe("ZhihuAuthSession", () => {
     expect(persistence.value.cookies).toEqual({});
   });
 
+  it("accepts cookies collected through Web viewer and verifies the profile", async () => {
+    const persistence = new MemoryAuthPersistence();
+    const transport = new FixtureZhihuTransport((request) => {
+      expect(request.headers.Cookie).toContain("z_c0=web-session");
+      return ok(JSON.stringify({
+        id: "web-person",
+        name: "网页登录用户",
+        url_token: "web-user",
+      }));
+    });
+    const auth = new ZhihuAuthSession(
+      transport,
+      persistence,
+      renderQr,
+      new ImmediateScheduler(),
+    );
+
+    await auth.startWebViewerLogin(() =>
+      Promise.resolve({
+        z_c0: "web-session",
+        d_c0: "web-device",
+      }));
+
+    expect(auth.snapshot()).toMatchObject({
+      phase: "authenticated",
+      profile: { name: "网页登录用户" },
+    });
+    expect(persistence.value.cookies).toMatchObject({
+      z_c0: "web-session",
+      d_c0: "web-device",
+    });
+  });
+
+  it("aborts an in-progress Web viewer login when the user cancels", async () => {
+    const auth = new ZhihuAuthSession(
+      new FixtureZhihuTransport(() => ok("{}")),
+      new MemoryAuthPersistence(),
+      renderQr,
+      new ImmediateScheduler(),
+    );
+    const login = auth.startWebViewerLogin(
+      (signal) =>
+        new Promise((_, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => reject(new Error("aborted")),
+            { once: true },
+          );
+        }),
+    );
+
+    auth.cancel();
+    await login;
+
+    expect(auth.snapshot()).toMatchObject({
+      phase: "cancelled",
+      message: "已取消登录。",
+    });
+  });
+
   it("surfaces risk control and stops polling", async () => {
     const auth = new ZhihuAuthSession(
       loginTransport(() => ({

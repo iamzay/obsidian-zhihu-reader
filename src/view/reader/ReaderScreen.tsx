@@ -697,6 +697,7 @@ function authLabel(auth: ZhihuAuthSnapshot): string {
     case "waiting-scan":
     case "waiting-confirm":
     case "creating-qr":
+    case "waiting-web-login":
       return "登录进行中";
     case "expired":
       return "登录已过期";
