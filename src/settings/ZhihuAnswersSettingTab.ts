@@ -1,9 +1,4 @@
-import {
-  type App,
-  PluginSettingTab,
-  type SettingDefinition,
-  type SettingDefinitionItem,
-} from "obsidian";
+import { type App, PluginSettingTab, Setting } from "obsidian";
 
 import type ZhihuAnswersPlugin from "@/main";
 
@@ -12,318 +7,254 @@ export class ZhihuAnswersSettingTab extends PluginSettingTab {
     super(app, zhihuPlugin);
   }
 
-  override getSettingDefinitions(): SettingDefinitionItem[] {
-    const settings = this.zhihuPlugin.getSettings();
+  override display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
+    new Setting(containerEl).setName("Zhihu Reader").setHeading();
+
     const diagnostic = this.zhihuPlugin.getDataDiagnostic();
-
-    return [
-      {
-        type: "group",
-        heading: "Zhihu Reader",
-        items: diagnostic === null
-          ? []
-          : [
-              {
-                name: "配置提示",
-                desc: diagnostic,
-                render: (setting) => {
-                  setting.settingEl.addClass("zhihu-settings__diagnostic");
-                },
-              },
-            ],
-      },
-      {
-        type: "group",
-        heading: "知乎登录",
-        items: this.authSettingDefinitions(),
-      },
-      {
-        type: "group",
-        heading: "阅读",
-        items: [
-          {
-            name: "每批回答数",
-            desc: "问题回答 feed 每次请求的数量，范围为 1–20。",
-            render: (setting) => {
-              setting.addSlider((slider) =>
-                slider
-                  .setLimits(1, 20, 1)
-                  .setValue(settings.feedLimit)
-                  .onChange((value) => {
-                    void this.zhihuPlugin.updateSettings({ feedLimit: value });
-                  }),
-              );
-            },
-          },
-          {
-            name: "默认排序",
-            desc: "打开问题时使用的回答排序。",
-            render: (setting) => {
-              setting.addDropdown((dropdown) =>
-                dropdown
-                  .addOption("default", "综合排序")
-                  .addOption("updated", "最近更新")
-                  .setValue(settings.answerOrder)
-                  .onChange((value) => {
-                    if (value === "default" || value === "updated") {
-                      void this.zhihuPlugin.updateSettings({
-                        answerOrder: value,
-                      });
-                    }
-                  }),
-              );
-            },
-          },
-          {
-            name: "历史条目上限",
-            desc: "最多保留的问题查询记录数量。",
-            render: (setting) => {
-              setting.addSlider((slider) =>
-                slider
-                  .setLimits(1, 500, 1)
-                  .setValue(settings.historyLimit)
-                  .onChange((value) => {
-                    void this.zhihuPlugin.updateSettings({
-                      historyLimit: value,
-                    });
-                  }),
-              );
-            },
-          },
-        ],
-      },
-      {
-        type: "group",
-        heading: "保存",
-        items: [
-          {
-            name: "回答保存目录",
-            desc: "相对于当前 Vault 根目录。",
-            render: (setting) => {
-              setting.addText((text) =>
-                text
-                  .setPlaceholder("Zhihu Reader")
-                  .setValue(settings.saveFolder)
-                  .onChange((value) => {
-                    const saveFolder = value.trim();
-                    if (saveFolder.length > 0) {
-                      void this.zhihuPlugin.updateSettings({ saveFolder });
-                    }
-                  }),
-              );
-            },
-          },
-          {
-            name: "文件路径模板",
-            desc: "支持 {问题标题}、{作者名}、{回答ID} 和 {问题ID}。",
-            render: (setting) => {
-              setting.addText((text) =>
-                text.setValue(settings.notePathTemplate).onChange((value) => {
-                  const notePathTemplate = value.trim();
-                  if (notePathTemplate.length > 0) {
-                    void this.zhihuPlugin.updateSettings({ notePathTemplate });
-                  }
-                }),
-              );
-            },
-          },
-          {
-            name: "保存后自动打开笔记",
-            render: (setting) => {
-              setting.addToggle((toggle) =>
-                toggle
-                  .setValue(settings.openNoteAfterSave)
-                  .onChange((value) => {
-                    void this.zhihuPlugin.updateSettings({
-                      openNoteAfterSave: value,
-                    });
-                  }),
-              );
-            },
-          },
-          {
-            name: "是否下载图片到 Vault",
-            desc: "临时阅读始终使用远程图片；只有保存回答时才会下载附件。",
-            render: (setting) => {
-              setting.addToggle((toggle) =>
-                toggle
-                  .setValue(settings.imageMode === "vault")
-                  .onChange((shouldDownload) => {
-                    void this.zhihuPlugin
-                      .updateSettings({
-                        imageMode: shouldDownload ? "vault" : "remote",
-                      })
-                      .then(() => this.update());
-                  }),
-              );
-            },
-          },
-          {
-            name: "附件位置",
-            visible: settings.imageMode === "vault",
-            render: (setting) => {
-              setting.addDropdown((dropdown) =>
-                dropdown
-                  .addOption("obsidian", "遵循 Obsidian 附件设置")
-                  .addOption("custom", "使用独立目录")
-                  .setValue(settings.attachmentLocation)
-                  .onChange((value) => {
-                    if (value === "obsidian" || value === "custom") {
-                      void this.zhihuPlugin
-                        .updateSettings({ attachmentLocation: value })
-                        .then(() => this.update());
-                    }
-                  }),
-              );
-            },
-          },
-          {
-            name: "附件目录",
-            desc: "相对于 Vault 根目录；支持 {问题标题}、{作者名}、{回答ID} 和 {问题ID}。",
-            visible:
-              settings.imageMode === "vault" &&
-              settings.attachmentLocation === "custom",
-            render: (setting) => {
-              setting.addText((text) =>
-                text.setValue(settings.attachmentFolder).onChange((value) => {
-                  const attachmentFolder = value.trim();
-                  if (attachmentFolder.length > 0) {
-                    void this.zhihuPlugin.updateSettings({ attachmentFolder });
-                  }
-                }),
-              );
-            },
-          },
-        ],
-      },
-    ];
-  }
-
-  private authSettingDefinitions(): SettingDefinition[] {
-    const auth = this.zhihuPlugin.getAuthSnapshot();
-    const availability = this.zhihuPlugin.getWebViewerAvailability();
-    const availabilityText = availability === "enabled"
-      ? "已启用"
-      : availability === "unsupported"
-        ? "移动端不可用"
-        : "尚未启用";
-    const definitions: SettingDefinition[] = [
-      {
-        name: "登录前准备",
-        desc:
-          availability === "unsupported"
-            ? "Web viewer 仅支持桌面端，因此推荐的网页登录在移动端不可用；当前仍可尝试二维码 API 登录。"
-            : `两种登录方式都需要先在“设置 → 核心插件”中启用 Web viewer（网页浏览器）。当前状态：${availabilityText}。`,
-      },
-      {
-        name: "登录状态",
-        desc: auth.message ?? authStatusText(auth.phase),
-        render: (setting) => {
-          if (auth.qrDataUrl !== null) {
-            setting.controlEl.createEl("img", {
-              cls: "zhihu-settings-auth__qr",
-              attr: {
-                src: auth.qrDataUrl,
-                alt: "知乎登录二维码",
-              },
-            });
-          }
-        },
-      },
-    ];
-
-    if (auth.phase === "authenticated") {
-      definitions.push({
-        name: auth.profile?.name ?? "已登录知乎",
-        desc: "登录 Cookie 仅保存在插件私有数据中。",
-        render: (setting) => {
-          setting.addButton((button) =>
-            button.setButtonText("退出登录").onClick(() => {
-              void this.zhihuPlugin.logout();
-            }),
-          );
-        },
+    if (diagnostic !== null) {
+      containerEl.createDiv({
+        cls: "zhihu-settings__diagnostic",
+        text: diagnostic,
+        attr: { role: "status" },
       });
-      return definitions;
     }
 
-    if (isLoginPending(auth.phase)) {
-      definitions.push({
-        name: "正在登录",
-        render: (setting) => {
-          setting.addButton((button) =>
-            button.setButtonText("取消").onClick(() => {
-              this.zhihuPlugin.cancelLogin();
+    const settings = this.zhihuPlugin.getSettings();
+
+    this.renderAuthSettings();
+
+    new Setting(containerEl).setName("阅读").setHeading();
+
+    new Setting(containerEl)
+      .setName("每批回答数")
+      .setDesc("问题回答 feed 每次请求的数量，范围为 1–20。")
+      .addSlider((slider) =>
+        slider
+          .setLimits(1, 20, 1)
+          .setValue(settings.feedLimit)
+          .onChange((value) => {
+            void this.zhihuPlugin.updateSettings({ feedLimit: value });
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("默认排序")
+      .setDesc("打开问题时使用的回答排序。")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("default", "综合排序")
+          .addOption("updated", "最近更新")
+          .setValue(settings.answerOrder)
+          .onChange((value) => {
+            if (value === "default" || value === "updated") {
+              void this.zhihuPlugin.updateSettings({ answerOrder: value });
+            }
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("历史条目上限")
+      .setDesc("最多保留的问题查询记录数量。")
+      .addSlider((slider) =>
+        slider
+          .setLimits(1, 500, 1)
+          .setValue(settings.historyLimit)
+          .onChange((value) => {
+            void this.zhihuPlugin.updateSettings({ historyLimit: value });
+          }),
+      );
+
+    new Setting(containerEl).setName("保存").setHeading();
+
+    new Setting(containerEl)
+      .setName("回答保存目录")
+      .setDesc("相对于当前 Vault 根目录。")
+      .addText((text) =>
+        text
+          .setPlaceholder("Zhihu Reader")
+          .setValue(settings.saveFolder)
+          .onChange((value) => {
+            const saveFolder = value.trim();
+            if (saveFolder.length > 0) {
+              void this.zhihuPlugin.updateSettings({ saveFolder });
+            }
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("文件路径模板")
+      .setDesc("支持 {问题标题}、{作者名}、{回答ID} 和 {问题ID}。")
+      .addText((text) =>
+        text.setValue(settings.notePathTemplate).onChange((value) => {
+          const notePathTemplate = value.trim();
+          if (notePathTemplate.length > 0) {
+            void this.zhihuPlugin.updateSettings({ notePathTemplate });
+          }
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("保存后自动打开笔记")
+      .addToggle((toggle) =>
+        toggle.setValue(settings.openNoteAfterSave).onChange((value) => {
+          void this.zhihuPlugin.updateSettings({ openNoteAfterSave: value });
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("是否下载图片到 Vault")
+      .setDesc("临时阅读始终使用远程图片；只有保存回答时才会下载附件。")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(settings.imageMode === "vault")
+          .onChange((shouldDownload) => {
+            void this.zhihuPlugin
+              .updateSettings({
+                imageMode: shouldDownload ? "vault" : "remote",
+              })
+              .then(() => this.display());
+          }),
+      );
+
+    if (settings.imageMode === "vault") {
+      new Setting(containerEl)
+        .setName("附件位置")
+        .addDropdown((dropdown) =>
+          dropdown
+            .addOption("obsidian", "遵循 Obsidian 附件设置")
+            .addOption("custom", "使用独立目录")
+            .setValue(settings.attachmentLocation)
+            .onChange((value) => {
+              if (value === "obsidian" || value === "custom") {
+                void this.zhihuPlugin
+                  .updateSettings({ attachmentLocation: value })
+                  .then(() => this.display());
+              }
+            }),
+        );
+      if (settings.attachmentLocation === "custom") {
+        new Setting(containerEl)
+          .setName("附件目录")
+          .setDesc(
+            "相对于 Vault 根目录；支持 {问题标题}、{作者名}、{回答ID} 和 {问题ID}。",
+          )
+          .addText((text) =>
+            text.setValue(settings.attachmentFolder).onChange((value) => {
+              const attachmentFolder = value.trim();
+              if (attachmentFolder.length > 0) {
+                void this.zhihuPlugin.updateSettings({ attachmentFolder });
+              }
             }),
           );
+      }
+    }
+  }
+
+  private renderAuthSettings(): void {
+    const { containerEl } = this;
+    const auth = this.zhihuPlugin.getAuthSnapshot();
+    new Setting(containerEl).setName("知乎登录").setHeading();
+
+    const authSection = containerEl.createDiv({
+      cls: "zhihu-settings-auth",
+      attr: { "aria-live": "polite" },
+    });
+    const webViewerAvailability =
+      this.zhihuPlugin.getWebViewerAvailability();
+    const webViewerStatus = webViewerAvailability === "enabled"
+      ? "已启用"
+      : webViewerAvailability === "unsupported"
+        ? "移动端不可用"
+        : "尚未启用";
+
+    new Setting(authSection)
+      .setName("登录前准备")
+      .setDesc(
+        webViewerAvailability === "unsupported"
+          ? "Web viewer 仅支持桌面端，因此推荐的网页登录在移动端不可用；当前仍可尝试二维码 API 登录。"
+          : `两种登录方式都需要先在“设置 → 核心插件”中启用 Web viewer（网页浏览器）。当前状态：${webViewerStatus}。`,
+      );
+    authSection.createEl("p", {
+      text: auth.message ?? authStatusText(auth.phase),
+    });
+
+    if (auth.qrDataUrl !== null) {
+      authSection.createEl("img", {
+        cls: "zhihu-settings-auth__qr",
+        attr: {
+          src: auth.qrDataUrl,
+          alt: "知乎登录二维码",
         },
       });
-      return definitions;
+    }
+
+    if (auth.phase === "authenticated") {
+      new Setting(authSection)
+        .setName(auth.profile?.name ?? "已登录知乎")
+        .setDesc("登录 Cookie 仅保存在插件私有数据中。")
+        .addButton((button) =>
+          button.setButtonText("退出登录").onClick(() => {
+            void this.zhihuPlugin.logout();
+          }),
+        );
+      return;
+    }
+
+    if (
+      auth.phase === "creating-qr" ||
+      auth.phase === "waiting-web-login" ||
+      auth.phase === "waiting-scan" ||
+      auth.phase === "waiting-confirm" ||
+      auth.phase === "verifying"
+    ) {
+      new Setting(authSection).addButton((button) =>
+        button.setButtonText("取消").onClick(() => {
+          this.zhihuPlugin.cancelLogin();
+        }),
+      );
+      return;
     }
 
     if (auth.phase === "risk-control" && auth.riskControlUrl !== null) {
-      definitions.push({
-        name: "完成网络环境验证",
-        render: (setting) => {
-          setting.addButton((button) =>
-            button.setButtonText("在浏览器完成验证").onClick(() => {
-              window.open(
-                auth.riskControlUrl ?? "",
-                "_blank",
-                "noopener,noreferrer",
-              );
-            }),
-          );
-        },
-      });
+      new Setting(authSection).addButton((button) =>
+        button.setButtonText("在浏览器完成验证").onClick(() => {
+          window.open(auth.riskControlUrl ?? "", "_blank", "noopener,noreferrer");
+        }),
+      );
     }
 
-    definitions.push(
-      {
-        name: "网页登录（推荐）",
-        desc: "请在 Obsidian Web viewer 中打开知乎登录页并登录。",
-        render: (setting) => {
-          setting.addButton((button) =>
-            button
-              .setButtonText(
-                availability === "unsupported"
-                  ? "仅桌面端可用"
-                  : availability === "disabled"
-                    ? "请先启用 Web viewer"
-                    : "打开网页登录",
-              )
-              .setCta()
-              .setDisabled(availability !== "enabled")
-              .onClick(() => {
-                void this.zhihuPlugin.startWebViewerLogin();
-              }),
-          );
-        },
-      },
-      {
-        name: "二维码 API 登录",
-        desc: "使用二维码接口完成登录，作为网页登录不可用时的备用方式；开始前同样请确认已启用 Web viewer 核心插件。",
-        render: (setting) => {
-          setting.addButton((button) =>
-            button.setButtonText("生成登录二维码").onClick(() => {
-              void this.zhihuPlugin.startQrLogin();
-            }),
-          );
-        },
-      },
-    );
-    return definitions;
-  }
-}
+    new Setting(authSection)
+      .setName("网页登录（推荐）")
+      .setDesc("请在 Obsidian Web viewer 中打开知乎登录页并登录。")
+      .addButton((button) =>
+        button
+          .setButtonText(
+            webViewerAvailability === "unsupported"
+              ? "仅桌面端可用"
+              : webViewerAvailability === "disabled"
+                ? "请先启用 Web viewer"
+                : "打开网页登录",
+          )
+          .setCta()
+          .setDisabled(webViewerAvailability !== "enabled")
+          .onClick(() => {
+            void this.zhihuPlugin.startWebViewerLogin();
+          }),
+      );
 
-function isLoginPending(phase: string): boolean {
-  return (
-    phase === "creating-qr" ||
-    phase === "waiting-web-login" ||
-    phase === "waiting-scan" ||
-    phase === "waiting-confirm" ||
-    phase === "verifying"
-  );
+    new Setting(authSection)
+      .setName("二维码 API 登录")
+      .setDesc(
+        "使用插件当前的二维码接口完成登录，作为网页登录不可用时的备用方式；开始前同样请确认已启用 Web viewer 核心插件。",
+      )
+      .addButton((button) =>
+        button.setButtonText("生成登录二维码").onClick(() => {
+          void this.zhihuPlugin.startQrLogin();
+        }),
+      );
+  }
 }
 
 function authStatusText(phase: string): string {

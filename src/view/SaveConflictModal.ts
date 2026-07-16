@@ -35,12 +35,12 @@ class SaveConflictModal extends Modal {
       .addButton((button) =>
         button.setButtonText("打开现有笔记").onClick(() => this.finish("open")),
       )
-      .addButton((button) =>
-        button
-          .setButtonText("覆盖")
-          .setDestructive()
-          .onClick(() => this.finish("overwrite")),
-      );
+      .addButton((button) => {
+        button.buttonEl.addClass("mod-warning");
+        button.setButtonText("覆盖").onClick(() => {
+          this.finish("overwrite");
+        });
+      });
   }
 
   override onClose(): void {
