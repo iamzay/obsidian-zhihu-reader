@@ -22,9 +22,17 @@ export type AnswerNoteSaveResult =
     };
 
 export interface AnswerNoteStorage {
-  findNoteByAnswerId(answerId: string): Promise<string | null>;
+  findNoteByAnswerId(
+    answerId: string,
+    searchFolder: string,
+  ): Promise<string | null>;
   fileExists(path: string): Promise<boolean>;
-  findFileByStem(stem: string): Promise<string | null>;
+  findAttachmentByStem(
+    stem: string,
+    notePath: string,
+    location: AttachmentLocation,
+    customFolder: string,
+  ): Promise<string | null>;
   resolveAttachmentPath(
     filename: string,
     notePath: string,
@@ -55,7 +63,10 @@ export class AnswerNoteWriter {
     answer: AnswerDocument,
     options: AnswerNoteSaveOptions,
   ): Promise<AnswerNoteSaveResult> {
-    const existingPath = await this.storage.findNoteByAnswerId(answer.id);
+    const existingPath = await this.storage.findNoteByAnswerId(
+      answer.id,
+      safeFolderPath(options.saveFolder),
+    );
     if (existingPath !== null && options.overwritePath !== existingPath) {
       return { status: "conflict", path: existingPath };
     }
@@ -171,7 +182,16 @@ export class AnswerNoteWriter {
         .replace(/\.[a-z0-9]{1,8}$/iu, "") || "image",
     );
     const stem = `${basename}-${hash}`;
-    const existing = await this.storage.findFileByStem(stem);
+    const attachmentFolder = renderFolderPath(
+      options.attachmentFolder,
+      answer,
+    );
+    const existing = await this.storage.findAttachmentByStem(
+      stem,
+      notePath,
+      options.attachmentLocation,
+      attachmentFolder,
+    );
     if (existing !== null) {
       return existing;
     }
@@ -183,7 +203,7 @@ export class AnswerNoteWriter {
       filename,
       notePath,
       options.attachmentLocation,
-      renderFolderPath(options.attachmentFolder, answer),
+      attachmentFolder,
     );
     await this.storage.writeBinary(path, downloaded.data);
     return path;

@@ -1,6 +1,6 @@
 {
   "name": "zhihu-reader",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An Obsidian plugin for reading Zhihu questions and answers.",
   "private": true,
   "license": "MIT",
@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "qrcode": "^1.5.4",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "turndown": "^7.2.0",
     "zod": "^3.25.0"
   },
@@ -27,15 +27,15 @@
     "@eslint/js": "^9.30.0",
     "@types/node": "^22.15.0",
     "@types/qrcode": "^1.5.6",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@types/turndown": "^5.0.5",
     "esbuild": "^0.25.0",
     "eslint": "^9.30.0",
     "eslint-import-resolver-typescript": "^4.4.0",
     "eslint-plugin-import-x": "^4.16.0",
     "globals": "^16.2.0",
-    "obsidian": "^1.8.0",
+    "obsidian": "^1.13.1",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.35.0",
     "vitest": "^3.2.0"

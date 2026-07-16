@@ -38,7 +38,7 @@ class SaveConflictModal extends Modal {
       .addButton((button) =>
         button
           .setButtonText("覆盖")
-          .setWarning()
+          .setDestructive()
           .onClick(() => this.finish("overwrite")),
       );
   }

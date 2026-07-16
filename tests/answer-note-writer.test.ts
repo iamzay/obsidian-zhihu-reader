@@ -29,7 +29,7 @@ class MemoryNoteStorage implements AnswerNoteStorage {
     return Promise.resolve(this.text.has(path) || this.binary.has(path));
   }
 
-  findFileByStem(stem: string): Promise<string | null> {
+  findAttachmentByStem(stem: string): Promise<string | null> {
     return Promise.resolve(
       [...this.binary.keys()].find((path) =>
         path.split("/").at(-1)?.startsWith(`${stem}.`),

@@ -1,11 +1,11 @@
-import { type App, normalizePath, TFile } from "obsidian";
+import { type App, normalizePath, TFile, TFolder } from "obsidian";
 
 import type {
   AnswerNoteStorage,
   AttachmentLocation,
 } from "@/save/AnswerNoteWriter";
 
-const IMAGE_EXTENSIONS = new Set([
+const IMAGE_EXTENSIONS = [
   "avif",
   "bin",
   "gif",
@@ -13,19 +13,31 @@ const IMAGE_EXTENSIONS = new Set([
   "jpg",
   "png",
   "webp",
-]);
+] as const;
 
 export class ObsidianAnswerNoteStorage implements AnswerNoteStorage {
   constructor(private readonly app: App) {}
 
-  async findNoteByAnswerId(answerId: string): Promise<string | null> {
-    for (const file of this.app.vault.getMarkdownFiles()) {
+  async findNoteByAnswerId(
+    answerId: string,
+    searchFolder: string,
+  ): Promise<string | null> {
+    const folder = this.app.vault.getAbstractFileByPath(
+      normalizePath(searchFolder),
+    );
+    if (!(folder instanceof TFolder)) {
+      return null;
+    }
+    const markdownFiles = filesWithin(folder).filter(
+      (file) => file.extension.toLowerCase() === "md",
+    );
+    for (const file of markdownFiles) {
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
       if (String(frontmatter?.zhihu_answer_id ?? "") === answerId) {
         return file.path;
       }
     }
-    for (const file of this.app.vault.getMarkdownFiles()) {
+    for (const file of markdownFiles) {
       const content = await this.app.vault.cachedRead(file);
       const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(
         content,
@@ -43,17 +55,44 @@ export class ObsidianAnswerNoteStorage implements AnswerNoteStorage {
   }
 
   fileExists(path: string): Promise<boolean> {
-    return Promise.resolve(this.app.vault.getAbstractFileByPath(normalizePath(path)) !== null);
+    return Promise.resolve(
+      this.app.vault.getAbstractFileByPath(normalizePath(path)) !== null,
+    );
   }
 
-  findFileByStem(stem: string): Promise<string | null> {
-    const file = this.app.vault
-      .getFiles()
-      .find(
-        ({ basename, extension }) =>
-          basename === stem && IMAGE_EXTENSIONS.has(extension.toLowerCase()),
+  async findAttachmentByStem(
+    stem: string,
+    notePath: string,
+    location: AttachmentLocation,
+    customFolder: string,
+  ): Promise<string | null> {
+    for (const extension of IMAGE_EXTENSIONS) {
+      const filename = `${stem}.${extension}`;
+      if (location === "custom") {
+        const path = normalizePath(`${customFolder}/${filename}`);
+        if (this.app.vault.getAbstractFileByPath(path) instanceof TFile) {
+          return path;
+        }
+        continue;
+      }
+
+      const availablePath =
+        await this.app.fileManager.getAvailablePathForAttachment(
+          filename,
+          notePath,
+        );
+      const separator = availablePath.lastIndexOf("/");
+      const folder = separator === -1
+        ? ""
+        : availablePath.slice(0, separator);
+      const originalPath = normalizePath(
+        folder.length === 0 ? filename : `${folder}/${filename}`,
       );
-    return Promise.resolve(file?.path ?? null);
+      if (this.app.vault.getAbstractFileByPath(originalPath) instanceof TFile) {
+        return originalPath;
+      }
+    }
+    return null;
   }
 
   async resolveAttachmentPath(
@@ -124,4 +163,16 @@ export class ObsidianAnswerNoteStorage implements AnswerNoteStorage {
       }
     }
   }
+}
+
+function filesWithin(folder: TFolder): TFile[] {
+  const files: TFile[] = [];
+  for (const child of folder.children) {
+    if (child instanceof TFile) {
+      files.push(child);
+    } else if (child instanceof TFolder) {
+      files.push(...filesWithin(child));
+    }
+  }
+  return files;
 }

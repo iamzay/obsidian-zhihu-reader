@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { QuestionHistoryEntry } from "@/history/QuestionHistory";
 
@@ -23,12 +23,14 @@ export function HistoryPopover({
 }): React.JSX.Element {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const wasOpen = useRef(false);
   const closeHistoryRef = useRef(actions.closeHistory);
   closeHistoryRef.current = actions.closeHistory;
 
   useEffect(() => {
     if (!isOpen) {
+      setIsConfirmingClear(false);
       if (wasOpen.current) {
         triggerRef.current?.focus();
       }
@@ -96,15 +98,38 @@ export function HistoryPopover({
             <button
               type="button"
               disabled={entries.length === 0}
-              onClick={() => {
-                if (window.confirm("确定清空全部知乎问题查询历史吗？")) {
-                  actions.clearHistory();
-                }
-              }}
+              onClick={() => setIsConfirmingClear(true)}
             >
               清空
             </button>
           </header>
+          {isConfirmingClear && (
+            <div
+              className="zhihu-history-popover__clear-confirmation"
+              role="alertdialog"
+              aria-label="确认清空查询历史"
+            >
+              <span>确定清空全部查询历史吗？</span>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingClear(false)}
+                >
+                  取消
+                </button>
+                <button
+                  className="mod-warning"
+                  type="button"
+                  onClick={() => {
+                    actions.clearHistory();
+                    setIsConfirmingClear(false);
+                  }}
+                >
+                  确认清空
+                </button>
+              </div>
+            </div>
+          )}
           {entries.length === 0 ? (
             <div className="zhihu-history-popover__empty">
               暂无查询过的问题

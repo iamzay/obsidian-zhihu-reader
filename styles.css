@@ -171,6 +171,24 @@
   flex: 0 0 auto;
 }
 
+.zhihu-history-popover__clear-confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-3);
+  padding: var(--size-4-3) var(--size-4-4);
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-modifier-error);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.zhihu-history-popover__clear-confirmation > div {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--size-4-2);
+}
+
 .zhihu-hot-popover ol,
 .zhihu-history-popover ul,
 .zhihu-author-answers-popover ul,
@@ -306,14 +324,20 @@
 }
 
 .zhihu-answers .zhihu-search-popover li > button {
-  all: unset;
+  appearance: none;
   box-sizing: border-box;
   display: flex;
   width: 100%;
   min-width: 0;
+  margin: 0;
   padding: var(--size-4-3);
+  border: 0;
   border-radius: var(--radius-s);
   color: var(--text-normal);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  text-align: inherit;
   cursor: pointer;
 }
 
@@ -404,16 +428,22 @@
 }
 
 .zhihu-answers .zhihu-history-popover li > .zhihu-history-popover__title {
-  all: unset;
+  appearance: none;
   box-sizing: border-box;
   display: flex;
   width: 100%;
   min-width: 0;
   align-items: center;
   gap: var(--size-4-3);
+  margin: 0;
   padding: var(--size-4-3);
   padding-right: 52px;
+  border: 0;
   color: var(--text-normal);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  text-align: inherit;
   cursor: pointer;
 }
 
@@ -483,12 +513,18 @@
 }
 
 .zhihu-answers .zhihu-author-answers-trigger {
-  all: unset;
+  appearance: none;
   box-sizing: border-box;
   display: block;
   width: 42px;
   height: 42px;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
   cursor: pointer;
 }
 
@@ -505,16 +541,22 @@
 }
 
 .zhihu-answers .zhihu-author-answers-popover li > button {
-  all: unset;
+  appearance: none;
   box-sizing: border-box;
   display: flex;
   width: 100%;
   min-width: 0;
   align-items: center;
   gap: var(--size-4-3);
+  margin: 0;
   padding: var(--size-4-3);
+  border: 0;
   border-radius: var(--radius-s);
   color: var(--text-normal);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  text-align: inherit;
   cursor: pointer;
 }
 
@@ -825,10 +867,15 @@
 }
 
 .zhihu-answers .zhihu-answer-author__stats > button {
-  all: unset;
+  appearance: none;
+  margin: 0;
   padding: 2px 4px;
+  border: 0;
   border-radius: var(--radius-s);
   color: var(--text-accent);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
   cursor: pointer;
 }
 
@@ -1106,9 +1153,14 @@
 }
 
 .zhihu-answers .zhihu-comment__replies-action > button {
-  all: unset;
+  appearance: none;
+  margin: 0;
   padding: 2px 0;
+  border: 0;
   color: var(--text-accent);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
   font-size: var(--font-ui-small);
   cursor: pointer;
 }
