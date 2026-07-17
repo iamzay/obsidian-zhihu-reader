@@ -8,10 +8,12 @@ const releaseWorkflow = readFileSync(
 );
 
 describe("release workflow", () => {
-  it("uses the build-provenance action supported by the plugin scanner", () => {
+  it("publishes release assets without generating attestations", () => {
+    expect(releaseWorkflow).not.toContain("attestations: write");
+    expect(releaseWorkflow).not.toContain("id-token: write");
+    expect(releaseWorkflow).not.toContain("actions/attest");
     expect(releaseWorkflow).toContain(
-      "uses: actions/attest-build-provenance@v2",
+      "gh release create \"$GITHUB_REF_NAME\"",
     );
-    expect(releaseWorkflow).not.toContain("uses: actions/attest@v4");
   });
 });
