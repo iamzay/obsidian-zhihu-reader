@@ -1,6 +1,6 @@
 {
   "name": "zhihu-reader",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "An Obsidian plugin for reading Zhihu questions and answers.",
   "private": true,
   "license": "MIT",
