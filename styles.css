@@ -91,8 +91,16 @@
   max-width: 8.5rem;
 }
 
-.zhihu-reader-toolbar__answer-position {
-  min-width: 4.5rem;
+.zhihu-reader-toolbar__answer-jump,
+.zhihu-reader-toolbar__answer-jump label {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+}
+
+.zhihu-reader-toolbar__answer-jump input {
+  width: 4rem;
+  min-width: 0;
   text-align: center;
 }
 
@@ -486,6 +494,9 @@
 }
 
 .zhihu-history-popover__content small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1);
   color: var(--text-faint);
 }
 

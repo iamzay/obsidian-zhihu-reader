@@ -30,6 +30,7 @@ export const QuestionHistoryEntrySchema = z.object({
   questionId: z.string().regex(/^\d+$/u),
   questionTitle: z.string().trim().min(1),
   lastQueriedAt: z.string().datetime({ offset: true }),
+  lastAnswerNumber: z.number().int().min(1).default(1),
 });
 
 export const ZhihuAuthProfileSchema = z.object({

@@ -123,13 +123,41 @@ describe("PluginDataRepository", () => {
         questionId: "100",
         questionTitle: "测试问题",
         lastQueriedAt: "2026-07-15T08:00:00.000Z",
+        lastAnswerNumber: 4,
       },
     ]);
 
     expect(saved.settings.feedLimit).toBe(9);
     expect(saved.auth).toEqual(current.auth);
     await expect(repository.load()).resolves.toMatchObject({
-      data: { history: [{ questionId: "100", questionTitle: "测试问题" }] },
+      data: {
+        history: [
+          {
+            questionId: "100",
+            questionTitle: "测试问题",
+            lastAnswerNumber: 4,
+          },
+        ],
+      },
+    });
+  });
+
+  it("defaults old history entries to the first answer", async () => {
+    const repository = new PluginDataRepository(
+      new MemoryPluginDataStorage({
+        history: [
+          {
+            questionId: "100",
+            questionTitle: "旧历史",
+            lastQueriedAt: "2026-07-15T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
+
+    await expect(repository.load()).resolves.toMatchObject({
+      data: { history: [{ lastAnswerNumber: 1 }] },
+      diagnostic: null,
     });
   });
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { App } from "obsidian";
 
 import type {
@@ -68,6 +68,7 @@ export interface ReaderScreenActions
   readonly retry: () => void;
   readonly previous: () => void;
   readonly next: () => void;
+  readonly jumpToAnswer: (answerNumber: number) => void;
   readonly changeOrder: (order: AnswerOrder) => void;
   readonly retryNavigation: () => void;
   readonly toggleAnswerVote: (answer: AnswerDocument) => void;
@@ -620,11 +621,15 @@ function AnswerToolbarNavigation({
   readonly disabled: boolean;
 }): React.JSX.Element {
   const current = snapshot.answers[snapshot.currentIndex];
+  const [answerNumber, setAnswerNumber] = useState(
+    String(Math.max(snapshot.currentIndex + 1, 1)),
+  );
   const hasQueuedNext = snapshot.currentIndex + 1 < snapshot.answers.length;
   const canNext = current !== undefined && (hasQueuedNext || !snapshot.isEnd);
-  const position = current === undefined
-    ? "暂无回答"
-    : `第 ${snapshot.currentIndex + 1} 篇`;
+
+  useEffect(() => {
+    setAnswerNumber(String(Math.max(snapshot.currentIndex + 1, 1)));
+  }, [snapshot.currentIndex]);
 
   return (
     <nav
@@ -640,9 +645,42 @@ function AnswerToolbarNavigation({
       >
         ← 上一回答
       </button>
-      <strong className="zhihu-reader-toolbar__answer-position" aria-live="polite">
-        {position}
-      </strong>
+      <form
+        className="zhihu-reader-toolbar__answer-jump"
+        onSubmit={(event) => {
+          event.preventDefault();
+          actions.jumpToAnswer(Number(answerNumber));
+        }}
+      >
+        <label>
+          <span>第</span>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            inputMode="numeric"
+            aria-label="回答编号"
+            value={answerNumber}
+            disabled={disabled || current === undefined || snapshot.isLoadingNextPage}
+            onChange={(event) => setAnswerNumber(event.target.value)}
+          />
+          <span>篇</span>
+        </label>
+        <button
+          type="submit"
+          disabled={
+            disabled ||
+            current === undefined ||
+            snapshot.isLoadingNextPage ||
+            answerNumber.length === 0
+          }
+        >
+          {snapshot.isLoadingNextPage ? "加载中…" : "跳转"}
+        </button>
+        <span className="visually-hidden" aria-live="polite">
+          当前为第 {snapshot.currentIndex + 1} 篇回答
+        </span>
+      </form>
       <label>
         <span className="visually-hidden">回答排序</span>
         <select
@@ -682,14 +720,16 @@ function AnswerToolbarNavigation({
           role="alert"
           title={snapshot.navigationError}
         >
-          <span>下一篇加载失败</span>
-          <button
-            type="button"
-            onClick={actions.retryNavigation}
-            disabled={disabled}
-          >
-            重试
-          </button>
+          <span>{snapshot.navigationError}</span>
+          {!snapshot.isEnd && (
+            <button
+              type="button"
+              onClick={actions.retryNavigation}
+              disabled={disabled}
+            >
+              重试
+            </button>
+          )}
         </span>
       )}
       {snapshot.isEnd && !hasQueuedNext && current !== undefined && (

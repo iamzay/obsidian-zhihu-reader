@@ -159,6 +159,88 @@ describe("ReaderSession question mode", () => {
     expect(session.snapshot().answers.map(({ id }) => id)).toEqual(["1", "2"]);
     expect(session.snapshot().currentIndex).toBe(0);
   });
+
+  it("jumps directly to a cached answer", async () => {
+    const gateway = new FakeGateway([
+      () => page(["1", "2", "3", "4", "5", "6"], true),
+    ]);
+    const session = new ReaderSession(gateway, () => ({
+      feedLimit: 6,
+      order: "default",
+    }));
+
+    await session.open({ type: "question", questionId: "100" });
+    await session.jumpTo(5);
+
+    expect(session.snapshot().currentIndex).toBe(4);
+    expect(gateway.pageRequests).toHaveLength(1);
+  });
+
+  it("loads additional pages until the requested answer is available", async () => {
+    const gateway = new FakeGateway([
+      () => page(["1", "2", "3"], false, pageUrl(3)),
+      () => page(["4", "5", "6"], false, pageUrl(6)),
+      () => page(["7", "8", "9"], true),
+    ]);
+    const session = new ReaderSession(gateway, () => ({
+      feedLimit: 3,
+      order: "default",
+    }));
+
+    await session.open({ type: "question", questionId: "100" });
+    await session.jumpTo(8);
+
+    expect(session.snapshot()).toMatchObject({
+      currentIndex: 7,
+      navigationError: null,
+    });
+    expect(session.snapshot().answers[7]?.id).toBe("8");
+    expect(gateway.pageRequests).toHaveLength(3);
+  });
+
+  it("keeps the current answer when the requested number does not exist", async () => {
+    const gateway = new FakeGateway([
+      () => page(["1", "2"], false, pageUrl(2)),
+      () => page(["3"], true),
+    ]);
+    const session = new ReaderSession(gateway, () => ({
+      feedLimit: 2,
+      order: "default",
+    }));
+
+    await session.open({ type: "question", questionId: "100" });
+    await session.jumpTo(8);
+
+    expect(session.snapshot()).toMatchObject({
+      currentIndex: 0,
+      navigationError: "未找到第 8 篇回答。",
+    });
+  });
+
+  it("continues a failed jump from the failed page when retried", async () => {
+    const gateway = new FakeGateway([
+      () => page(["1", "2"], false, pageUrl(2)),
+      () => {
+        throw new Error("下一页失败");
+      },
+      () => page(["3", "4"], true),
+    ]);
+    const session = new ReaderSession(gateway, () => ({
+      feedLimit: 2,
+      order: "default",
+    }));
+
+    await session.open({ type: "question", questionId: "100" });
+    await session.jumpTo(4);
+    expect(session.snapshot().navigationError).toBe("下一页失败");
+
+    await session.retryNavigation();
+
+    expect(session.snapshot()).toMatchObject({
+      currentIndex: 3,
+      navigationError: null,
+    });
+  });
 });
 
 describe("ReaderSession answer URL mode", () => {

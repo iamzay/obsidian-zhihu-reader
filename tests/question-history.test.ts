@@ -36,21 +36,42 @@ describe("QuestionHistory", () => {
       clock,
     );
 
-    await history.record(question("1", "问题一"));
-    await history.record(question("2", "问题二"));
-    await history.record(question("1", "问题一（新标题）"));
+    await history.record(question("1", "问题一"), 2);
+    await history.record(question("2", "问题二"), 1);
+    await history.record(question("1", "问题一（新标题）"), 6);
 
     expect(history.list()).toEqual([
       {
         questionId: "1",
         questionTitle: "问题一（新标题）",
         lastQueriedAt: "2026-07-15T03:00:00.000Z",
+        lastAnswerNumber: 6,
       },
       {
         questionId: "2",
         questionTitle: "问题二",
         lastQueriedAt: "2026-07-15T02:00:00.000Z",
+        lastAnswerNumber: 1,
       },
+    ]);
+  });
+
+  it("updates the last answer number without changing query order or time", async () => {
+    const persistence = new MemoryPersistence();
+    const history = new QuestionHistory(
+      [
+        entry("2", "问题二", "2026-07-15T02:00:00.000Z"),
+        entry("1", "问题一", "2026-07-15T01:00:00.000Z"),
+      ],
+      { limit: 50 },
+      persistence,
+    );
+
+    await history.updatePosition("1", 9);
+
+    expect(history.list()).toEqual([
+      entry("2", "问题二", "2026-07-15T02:00:00.000Z"),
+      entry("1", "问题一", "2026-07-15T01:00:00.000Z", 9),
     ]);
   });
 
@@ -113,8 +134,9 @@ function entry(
   questionId: string,
   questionTitle: string,
   lastQueriedAt: string,
+  lastAnswerNumber = 1,
 ): QuestionHistoryEntry {
-  return { questionId, questionTitle, lastQueriedAt };
+  return { questionId, questionTitle, lastQueriedAt, lastAnswerNumber };
 }
 
 function sequenceClock(values: string[]): () => Date {

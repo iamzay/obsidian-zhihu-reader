@@ -110,10 +110,17 @@ export default class ZhihuAnswersPlugin extends Plugin {
             openFromClipboard: () => {
               void this.openFromClipboard();
             },
-            recordHistory: (question) => {
-              void this.questionHistory.record(question).catch(() => {
+            recordHistory: (question, answerNumber) => {
+              void this.questionHistory.record(question, answerNumber).catch(() => {
                 new Notice("查询历史暂时无法保存，后续写入时会再次尝试。");
               });
+            },
+            updateHistoryPosition: (questionId, answerNumber) => {
+              void this.questionHistory
+                .updatePosition(questionId, answerNumber)
+                .catch(() => {
+                  new Notice("阅读位置暂时无法保存，后续写入时会再次尝试。");
+                });
             },
             removeHistory: (questionId) => {
               void this.questionHistory.remove(questionId).catch(() => {

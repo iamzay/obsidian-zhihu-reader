@@ -4,6 +4,7 @@ export interface QuestionHistoryEntry {
   readonly questionId: string;
   readonly questionTitle: string;
   readonly lastQueriedAt: string;
+  readonly lastAnswerNumber: number;
 }
 
 export interface QuestionHistoryPolicy {
@@ -44,16 +45,33 @@ export class QuestionHistory {
     return () => this.listeners.delete(listener);
   }
 
-  record(question: QuestionSummary): Promise<void> {
+  record(question: QuestionSummary, answerNumber = 1): Promise<void> {
     const next: QuestionHistoryEntry = {
       questionId: question.id,
       questionTitle: question.title,
       lastQueriedAt: this.now().toISOString(),
+      lastAnswerNumber: validateAnswerNumber(answerNumber),
     };
     this.entries = [
       next,
       ...this.entries.filter(({ questionId }) => questionId !== question.id),
     ].slice(0, this.policy.limit);
+    return this.changed();
+  }
+
+  updatePosition(questionId: string, answerNumber: number): Promise<void> {
+    const index = this.entries.findIndex((entry) => entry.questionId === questionId);
+    if (index < 0) {
+      return Promise.resolve();
+    }
+    const lastAnswerNumber = validateAnswerNumber(answerNumber);
+    const current = this.entries[index];
+    if (current?.lastAnswerNumber === lastAnswerNumber) {
+      return Promise.resolve();
+    }
+    this.entries = this.entries.map((entry, entryIndex) =>
+      entryIndex === index ? { ...entry, lastAnswerNumber } : entry,
+    );
     return this.changed();
   }
 
@@ -121,4 +139,11 @@ function validatePolicy(policy: QuestionHistoryPolicy): QuestionHistoryPolicy {
     throw new Error("History limit must be a positive integer.");
   }
   return { ...policy };
+}
+
+function validateAnswerNumber(answerNumber: number): number {
+  if (!Number.isInteger(answerNumber) || answerNumber < 1) {
+    throw new Error("Answer number must be a positive integer.");
+  }
+  return answerNumber;
 }

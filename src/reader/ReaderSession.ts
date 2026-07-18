@@ -23,6 +23,7 @@ export class ReaderSession {
   private hasLoadedFirstPage = false;
   private pageRequest: Promise<void> | null = null;
   private nextOperation: Promise<void> | null = null;
+  private pendingJumpAnswerNumber: number | null = null;
 
   constructor(
     private readonly gateway: ZhihuGateway,
@@ -64,6 +65,7 @@ export class ReaderSession {
       currentIndex: this.state.currentIndex - 1,
       navigationError: null,
     };
+    this.pendingJumpAnswerNumber = null;
     this.emit();
   }
 
@@ -72,6 +74,24 @@ export class ReaderSession {
       return this.nextOperation;
     }
     const operation = this.performNext().finally(() => {
+      if (this.nextOperation === operation) {
+        this.nextOperation = null;
+      }
+    });
+    this.nextOperation = operation;
+    return operation;
+  }
+
+  jumpTo(answerNumber: number): Promise<void> {
+    if (this.nextOperation !== null) {
+      const generation = this.generation;
+      return this.nextOperation.then(async () => {
+        if (this.isCurrent(generation)) {
+          await this.jumpTo(answerNumber);
+        }
+      });
+    }
+    const operation = this.performJump(answerNumber).finally(() => {
       if (this.nextOperation === operation) {
         this.nextOperation = null;
       }
@@ -96,6 +116,7 @@ export class ReaderSession {
     this.hasLoadedFirstPage = false;
     this.pageRequest = null;
     this.nextOperation = null;
+    this.pendingJumpAnswerNumber = null;
     this.seenAnswerIds = new Set(
       initialAnswer === null ? [] : [initialAnswer.id],
     );
@@ -132,6 +153,11 @@ export class ReaderSession {
   }
 
   async retryNavigation(): Promise<void> {
+    if (this.pendingJumpAnswerNumber !== null) {
+      const answerNumber = this.pendingJumpAnswerNumber;
+      await this.jumpTo(answerNumber);
+      return;
+    }
     if (
       this.state.phase !== "ready" ||
       this.state.question === null ||
@@ -148,6 +174,7 @@ export class ReaderSession {
     this.listeners.clear();
     this.pageRequest = null;
     this.nextOperation = null;
+    this.pendingJumpAnswerNumber = null;
   }
 
   private async openQuestion(
@@ -261,9 +288,11 @@ export class ReaderSession {
   }
 
   private async performNext(): Promise<void> {
+    this.pendingJumpAnswerNumber = null;
     if (this.state.phase !== "ready") {
       return;
     }
+    const generation = this.generation;
     if (this.state.currentIndex + 1 < this.state.answers.length) {
       this.moveForward();
       return;
@@ -271,6 +300,9 @@ export class ReaderSession {
 
     if (this.pageRequest !== null) {
       await this.pageRequest;
+      if (!this.isCurrent(generation)) {
+        return;
+      }
       if (this.state.currentIndex + 1 < this.state.answers.length) {
         this.moveForward();
       }
@@ -281,11 +313,76 @@ export class ReaderSession {
       return;
     }
     const previousLength = this.state.answers.length;
-    await this.loadPage(this.state.question.id, this.generation, false);
+    await this.loadPage(this.state.question.id, generation, false);
+    if (!this.isCurrent(generation)) {
+      return;
+    }
     if (this.state.answers.length > previousLength) {
       this.state = { ...this.state, currentIndex: previousLength };
       this.emit();
     }
+  }
+
+  private async performJump(answerNumber: number): Promise<void> {
+    if (this.state.phase !== "ready") {
+      return;
+    }
+    if (!Number.isInteger(answerNumber) || answerNumber < 1) {
+      this.pendingJumpAnswerNumber = null;
+      this.state = {
+        ...this.state,
+        navigationError: "回答编号必须是大于 0 的整数。",
+      };
+      this.emit();
+      return;
+    }
+
+    this.pendingJumpAnswerNumber = answerNumber;
+    const generation = this.generation;
+    const targetIndex = answerNumber - 1;
+    while (
+      targetIndex >= this.state.answers.length &&
+      !this.state.isEnd &&
+      this.state.question !== null
+    ) {
+      const previousLength = this.state.answers.length;
+      const previousPageUrl = this.nextPageUrl;
+      await this.loadPage(this.state.question.id, generation, false);
+      if (!this.isCurrent(generation)) {
+        return;
+      }
+      if (this.state.navigationError !== null) {
+        return;
+      }
+      if (
+        this.state.answers.length === previousLength &&
+        this.nextPageUrl === previousPageUrl &&
+        !this.state.isEnd
+      ) {
+        this.pendingJumpAnswerNumber = null;
+        this.state = {
+          ...this.state,
+          navigationError: "回答列表没有返回更多内容，无法继续跳转。",
+        };
+        this.emit();
+        return;
+      }
+    }
+
+    this.pendingJumpAnswerNumber = null;
+    if (targetIndex < this.state.answers.length) {
+      this.state = {
+        ...this.state,
+        currentIndex: targetIndex,
+        navigationError: null,
+      };
+    } else {
+      this.state = {
+        ...this.state,
+        navigationError: `未找到第 ${answerNumber} 篇回答。`,
+      };
+    }
+    this.emit();
   }
 
   private loadPage(
@@ -380,6 +477,7 @@ export class ReaderSession {
     this.hasLoadedFirstPage = false;
     this.pageRequest = null;
     this.nextOperation = null;
+    this.pendingJumpAnswerNumber = null;
     this.state = {
       ...emptySnapshot(order),
       target,

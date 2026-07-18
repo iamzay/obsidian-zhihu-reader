@@ -68,7 +68,14 @@ export const ZHIHU_READER_ICON_SVG = [
 export interface ZhihuAnswersViewActions {
   readonly openUrlModal: () => void;
   readonly openFromClipboard: () => void;
-  readonly recordHistory: (question: NonNullable<ReaderSnapshot["question"]>) => void;
+  readonly recordHistory: (
+    question: NonNullable<ReaderSnapshot["question"]>,
+    answerNumber: number,
+  ) => void;
+  readonly updateHistoryPosition: (
+    questionId: string,
+    answerNumber: number,
+  ) => void;
   readonly removeHistory: (questionId: string) => void;
   readonly clearHistory: () => void;
   readonly saveAnswer: (
@@ -166,7 +173,20 @@ export class ZhihuAnswersView extends ItemView {
         snapshot.question !== null
       ) {
         this.shouldRecordQuery = false;
-        this.actions.recordHistory(snapshot.question);
+        this.actions.recordHistory(
+          snapshot.question,
+          Math.max(snapshot.currentIndex + 1, 1),
+        );
+      } else if (
+        shouldResetScroll &&
+        snapshot.phase === "ready" &&
+        snapshot.question !== null &&
+        currentAnswerId !== null
+      ) {
+        this.actions.updateHistoryPosition(
+          snapshot.question.id,
+          snapshot.currentIndex + 1,
+        );
       }
       this.render();
       if (shouldResetScroll) {
@@ -367,6 +387,11 @@ export class ZhihuAnswersView extends ItemView {
       next: () => {
         if (this.hasNetworkAccess()) {
           void this.session.next();
+        }
+      },
+      jumpToAnswer: (answerNumber: number) => {
+        if (this.hasNetworkAccess()) {
+          void this.session.jumpTo(answerNumber);
         }
       },
       changeOrder: (order: AnswerOrder) => {

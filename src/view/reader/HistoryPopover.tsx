@@ -152,6 +152,8 @@ export function HistoryPopover({
                     <span className="zhihu-history-popover__content">
                       <strong>{entry.questionTitle}</strong>
                       <small>
+                        <span>上次读到第 {entry.lastAnswerNumber} 篇</span>
+                        <span aria-hidden="true">·</span>
                         <time
                           dateTime={entry.lastQueriedAt}
                           title={formatFullHistoryDate(entry.lastQueriedAt)}
