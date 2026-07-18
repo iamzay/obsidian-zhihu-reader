@@ -158,6 +158,7 @@ function searchGateway(
     getAuthorAnswerPage: () => Promise.reject(new Error("Not used")),
     getAnswerPage: () => Promise.reject(new Error("Not used")),
     getHotList: () => Promise.reject(new Error("Not used")),
+    getRecommendationPage: () => Promise.reject(new Error("Not used")),
   };
 }
 

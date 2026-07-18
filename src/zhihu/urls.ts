@@ -51,6 +51,27 @@ export interface FetchSearchAnswersOptions {
   pageUrl?: string;
 }
 
+export interface FetchRecommendationsOptions {
+  limit?: number;
+  pageUrl?: string;
+}
+
+export function buildRecommendationsUrl(
+  options: FetchRecommendationsOptions = {},
+): string {
+  if (options.pageUrl !== undefined) {
+    return validateRecommendationsPageUrl(options.pageUrl);
+  }
+  const limit = options.limit ?? 10;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 20) {
+    throw new Error("Recommendation limit must be an integer between 1 and 20.");
+  }
+  const url = new URL("/api/v3/feed/topstory/recommend", ZHIHU_WEB_ORIGIN);
+  url.searchParams.set("desktop", "true");
+  url.searchParams.set("limit", String(limit));
+  return url.toString();
+}
+
 export function buildSearchAnswersUrl(
   query: string,
   options: FetchSearchAnswersOptions = {},
@@ -286,6 +307,18 @@ function validateSearchPageUrl(query: string, pageUrl: string): string {
     url.searchParams.get("q") !== query
   ) {
     throw new Error("Invalid Zhihu search page URL.");
+  }
+  return url.toString();
+}
+
+function validateRecommendationsPageUrl(pageUrl: string): string {
+  const url = new URL(pageUrl);
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "www.zhihu.com" ||
+    url.pathname !== "/api/v3/feed/topstory/recommend"
+  ) {
+    throw new Error("Invalid Zhihu recommendations page URL.");
   }
   return url.toString();
 }

@@ -89,6 +89,7 @@ function hotListGateway(
         );
       }
     },
+    getRecommendationPage: () => Promise.reject(new Error("Not used")),
     getQuestion: () => Promise.reject(new Error("Not used")),
     getAnswer: () => Promise.reject(new Error("Not used")),
     setAnswerVote: () => Promise.reject(new Error("Not used")),

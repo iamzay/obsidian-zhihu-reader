@@ -65,6 +65,10 @@ class FakeGateway implements ZhihuGateway {
     return Promise.resolve([]);
   }
 
+  getRecommendationPage(): Promise<never> {
+    return Promise.reject(new Error("Not used"));
+  }
+
   getAuthorAnswerPage(): Promise<AuthorAnswerPage> {
     return Promise.reject(new Error("Not used"));
   }

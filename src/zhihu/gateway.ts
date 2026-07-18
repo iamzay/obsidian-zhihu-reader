@@ -5,6 +5,7 @@ import type {
   AuthorAnswerPage,
   CommentPage,
   QuestionSummary,
+  RecommendationPage,
   SearchAnswerPage,
   ZhihuHotListItem,
 } from "@/domain/zhihu";
@@ -15,6 +16,7 @@ import {
   parseCommentsResponse,
   parseHotListResponse,
   parseQuestionResponse,
+  parseRecommendationsResponse,
   parseQuestionFeedsResponse,
   parseSearchAnswersResponse,
   ZhihuApiResponseError,
@@ -34,12 +36,14 @@ import {
   buildHotListUrl,
   buildQuestionFeedsUrl,
   buildQuestionUrl,
+  buildRecommendationsUrl,
   buildSearchAnswersUrl,
   type FetchQuestionAnswersOptions,
   type FetchAuthorAnswersOptions,
   type FetchAnswerCommentsOptions,
   type FetchChildCommentsOptions,
   type FetchSearchAnswersOptions,
+  type FetchRecommendationsOptions,
 } from "@/zhihu/urls";
 
 const ZHIHU_WEB_ORIGIN = "https://www.zhihu.com";
@@ -83,6 +87,9 @@ export interface ZhihuGateway {
     options?: FetchAuthorAnswersOptions,
   ): Promise<AuthorAnswerPage>;
   getHotList(limit?: number): Promise<readonly ZhihuHotListItem[]>;
+  getRecommendationPage(
+    options?: FetchRecommendationsOptions,
+  ): Promise<RecommendationPage>;
   getAnswerPage(
     questionId: string,
     options?: FetchQuestionAnswersOptions,
@@ -200,6 +207,20 @@ export class HttpZhihuGateway implements ZhihuGateway {
     );
     try {
       return parseHotListResponse(text);
+    } catch (error: unknown) {
+      throw responseError(error);
+    }
+  }
+
+  async getRecommendationPage(
+    options: FetchRecommendationsOptions = {},
+  ): Promise<RecommendationPage> {
+    const text = await this.request(
+      buildRecommendationsUrl(options),
+      ZHIHU_WEB_ORIGIN,
+    );
+    try {
+      return parseRecommendationsResponse(text);
     } catch (error: unknown) {
       throw responseError(error);
     }

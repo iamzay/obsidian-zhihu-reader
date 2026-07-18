@@ -10,6 +10,7 @@ import {
   parseHotListResponse,
   parseQuestionFeedsResponse,
   parseQuestionResponse,
+  parseRecommendationsResponse,
   parseSearchAnswersResponse,
   ZhihuApiResponseError,
   ZhihuResponseValidationError,
@@ -23,6 +24,71 @@ function fixture(name: string): string {
 }
 
 describe("Zhihu response parsing", () => {
+  it("parses supported recommendation targets and filters other cards", () => {
+    const page = parseRecommendationsResponse(fixture("recommendations.json"));
+
+    expect(page.items).toEqual([
+      expect.objectContaining({
+        id: "answer:90071992547409931234",
+        target: {
+          type: "answer",
+          answerId: "90071992547409931234",
+          questionId: "123456789",
+        },
+        title: "如何在 Obsidian 中建立阅读工作流？",
+        authorName: "示例作者",
+        reason: "因为你关注了知识管理",
+      }),
+      expect.objectContaining({
+        id: "question:1993016651038364760",
+        target: { type: "question", questionId: "1993016651038364760" },
+        title: "有哪些值得长期坚持的阅读习惯？",
+        reason: "热门问题",
+      }),
+    ]);
+    expect(page).toMatchObject({ isEnd: false });
+    expect(page.nextPageUrl).toContain("offset=10");
+  });
+
+  it("does not expose machine-readable recommendation metadata as UI text", () => {
+    const response = JSON.stringify({
+      data: [
+        {
+          brief:
+            '{"source":"TS","type":"answer","id":2061415445878544254}',
+          target: {
+            type: "answer",
+            id: "123",
+            excerpt: "回答摘要",
+            question: {
+              id: "456",
+              title: "测试问题",
+            },
+          },
+        },
+        {
+          brief: {
+            text: '{"source":"TS","type":"answer","id":789}',
+          },
+          target: {
+            type: "answer",
+            id: "789",
+            excerpt: "另一个回答摘要",
+            question: {
+              id: "456",
+              title: "测试问题",
+            },
+          },
+        },
+      ],
+      paging: { is_end: true },
+    });
+
+    const page = parseRecommendationsResponse(response);
+
+    expect(page.items.map(({ reason }) => reason)).toEqual(["", ""]);
+  });
+
   it("converts a question fixture to a domain summary", () => {
     const question = parseQuestionResponse(fixture("question.json"));
 

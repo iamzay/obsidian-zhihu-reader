@@ -12,7 +12,7 @@ answers worth keeping as Markdown notes.
 ## Features
 
 - Render questions and answers through Obsidian's Markdown renderer.
-- Search Zhihu answers and browse the daily hot list.
+- Search Zhihu answers, browse personalized recommendations, and view the daily hot list.
 - Keep a local history of successfully opened questions.
 - Read answer comments.
 - Click an author avatar to browse that author's public answers.
@@ -94,6 +94,7 @@ The command palette provides commands for:
 - Opening a Zhihu question or answer URL.
 - Opening a Zhihu URL from the clipboard.
 - Searching Zhihu answers.
+- Opening the personalized recommendation feed.
 - Opening the daily hot list.
 - Opening question history.
 - Saving the currently displayed answer.

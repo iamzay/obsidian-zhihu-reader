@@ -24,6 +24,7 @@
 | `PluginDataRepository` | `load`、`save` | Zod 默认值、迁移、Obsidian `loadData/saveData` |
 | `QuestionHistory` | `record`、`list`、`remove`、`clear` | 问题 ID 去重、排序、上限和持久化 |
 | `DailyHotList` | `load`、`snapshot`、`subscribe` | 请求合并、短时缓存、刷新、过期结果和错误恢复 |
+| `RecommendationFeed` | `load`、`loadMore`、`retry` | 推荐过滤、分页、去重、刷新和局部错误恢复 |
 | `AuthorAnswerList` | `showAuthor`、`loadMore`、`retry` | 延迟加载、作者切换、分页游标、去重和局部错误恢复 |
 | `AnswerCommentList` | `showAnswer`、`loadMore`、`toggleReplies` | 排序、根评论/子回复分页、去重、并发和局部错误恢复 |
 | `ZhihuAnswerSearch` | `search`、`loadMore`、`retry` | 关键词切换、回答过滤、分页、去重和过期响应 |
@@ -57,7 +58,8 @@ flowchart LR
     T13 --> T14["ZA-14 回答评论阅读"]
     T14 --> T15["ZA-15 搜索知乎回答"]
     T15 --> T16["ZA-16 回答点赞"]
-    T16 --> T10
+    T16 --> T17["ZA-17 推荐流"]
+    T17 --> T10
     T10 --> T11["ZA-11 发布准备"]
 ```
 
@@ -323,7 +325,7 @@ tests/zhihu-schemas.test.ts
 
 ### ZA-12 每日热榜
 
-目标：在不引入首页推荐流的前提下，为阅读器提供一个轻量的问题发现入口。
+目标：在不引入完整首页信息流的前提下，为阅读器提供一个轻量的问题发现入口。
 
 实现内容：
 
@@ -419,6 +421,25 @@ tests/zhihu-schemas.test.ts
 - 同一回答请求进行中不能重复提交；切换回答后各回答的内存状态互不覆盖。
 - 点赞不写 Vault、不产生查询历史，不提供反对、评论点赞或其他写操作。
 
+### ZA-17 推荐流
+
+目标：在不改变专注阅读布局的前提下，提供知乎个性化问题与回答发现入口。
+
+实现内容：
+
+- 扩展 `ZhihuGateway.getRecommendationPage()`、同源分页 URL 校验、推荐 Zod schema 和领域模型。
+- 只保留问题与回答目标，在解析层过滤广告和当前阅读器不支持的卡片类型。
+- 实现 `RecommendationFeed`，封装首屏、刷新、分页、去重、请求合并和失败恢复。
+- 在工具栏实现 `RecommendationPopover`，支持滚动分页、显式加载、空状态、重试和焦点管理。
+- 新增 `Zhihu Reader: 查看推荐流` 命令；点击条目复用现有问题或回答阅读链路。
+
+验收标准：
+
+- 首屏和下一页只访问知乎 Web 推荐接口，非安全数字 ID 可从 URL 恢复，否则不导航。
+- 刷新成功后替换旧列表；分页失败保留已有条目；重复问题或回答不重复展示。
+- 未登录时入口禁用；浏览、刷新和分页不写历史或 Vault，目标成功打开后才按问题记录历史。
+- Escape、外部点击、关闭后的焦点返回、滚动分页和按钮分页均可用。
+
 ## 5. 推荐里程碑
 
 ### Milestone A：可查询、可阅读
@@ -435,7 +456,7 @@ tests/zhihu-schemas.test.ts
 
 ### Milestone D：可发布版本
 
-完成 ZA-09 至 ZA-16。登录、每日热榜、作者回答发现、评论阅读、回答搜索、回答点赞、兼容性、无障碍和发布流程完成。
+完成 ZA-09 至 ZA-17。登录、每日热榜、推荐流、作者回答发现、评论阅读、回答搜索、回答点赞、兼容性、无障碍和发布流程完成。
 
 ## 6. 第一项建议
 

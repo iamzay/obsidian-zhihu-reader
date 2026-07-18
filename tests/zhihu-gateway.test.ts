@@ -196,6 +196,26 @@ describe("HttpZhihuGateway", () => {
     );
   });
 
+  it("loads the recommendation feed and follows its paging URL", async () => {
+    const transport = new FixtureZhihuTransport(() => ({
+      status: 200,
+      text: fixture("recommendations.json"),
+    }));
+    const gateway = new HttpZhihuGateway(transport);
+
+    const firstPage = await gateway.getRecommendationPage();
+    await gateway.getRecommendationPage({
+      pageUrl: firstPage.nextPageUrl ?? undefined,
+    });
+
+    expect(firstPage.items).toHaveLength(2);
+    expect(transport.requests[0]).toMatchObject({
+      url: "https://www.zhihu.com/api/v3/feed/topstory/recommend?desktop=true&limit=10",
+      headers: { Referer: "https://www.zhihu.com" },
+    });
+    expect(transport.requests[1]?.url).toContain("offset=10");
+  });
+
   it("classifies a hot-list authentication response as forbidden", async () => {
     const gateway = new HttpZhihuGateway(
       new FixtureZhihuTransport(() => ({

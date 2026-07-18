@@ -1,0 +1,55 @@
+{
+  "data": [
+    {
+      "id": "feed-answer-1",
+      "type": "feed",
+      "brief": { "text": "因为你关注了知识管理" },
+      "target": {
+        "type": "answer",
+        "id": "90071992547409931234",
+        "url": "https://www.zhihu.com/question/123456789/answer/90071992547409931234",
+        "excerpt": "把临时阅读和永久笔记分开，能够显著降低知识库噪音。",
+        "voteup_count": 128,
+        "comment_count": 16,
+        "author": {
+          "id": "author-1",
+          "name": "示例作者",
+          "headline": "知识管理研究者"
+        },
+        "question": {
+          "type": "question",
+          "id": "123456789",
+          "title": "如何在 Obsidian 中建立阅读工作流？",
+          "url": "https://www.zhihu.com/question/123456789"
+        }
+      }
+    },
+    {
+      "id": "feed-question-1",
+      "type": "feed",
+      "brief": "热门问题",
+      "target": {
+        "type": "question",
+        "id": 9007199254740992,
+        "url": "https://www.zhihu.com/question/1993016651038364760",
+        "title": "有哪些值得长期坚持的阅读习惯？",
+        "excerpt": "分享让阅读真正转化为知识的方法。",
+        "answer_count": 42,
+        "follower_count": 320
+      }
+    },
+    {
+      "id": "advertisement-1",
+      "type": "market_card",
+      "target": {
+        "type": "article",
+        "id": "1",
+        "title": "不支持的内容类型"
+      }
+    }
+  ],
+  "paging": {
+    "is_end": false,
+    "next": "https://www.zhihu.com/api/v3/feed/topstory/recommend?desktop=true&limit=10&offset=10"
+  }
+}

@@ -28,6 +28,10 @@ import {
 import type {
   QuestionHistoryEntry,
 } from "@/history/QuestionHistory";
+import {
+  RecommendationFeed,
+  type RecommendationFeedSnapshot,
+} from "@/recommendation/RecommendationFeed";
 import { zhihuHtmlToMarkdown } from "@/markdown/toMarkdown";
 import {
   ZhihuAnswerSearch,
@@ -88,18 +92,21 @@ export class ZhihuAnswersView extends ItemView {
   private root: Root | null = null;
   private readonly session: ReaderSession;
   private readonly dailyHotList: DailyHotList;
+  private readonly recommendationFeed: RecommendationFeed;
   private readonly authorAnswerList: AuthorAnswerList;
   private readonly answerCommentList: AnswerCommentList;
   private readonly search: ZhihuAnswerSearch;
   private readonly answerVote: AnswerVoteController;
   private unsubscribeSession: (() => void) | null = null;
   private unsubscribeDailyHotList: (() => void) | null = null;
+  private unsubscribeRecommendationFeed: (() => void) | null = null;
   private unsubscribeAuthorAnswerList: (() => void) | null = null;
   private unsubscribeAnswerCommentList: (() => void) | null = null;
   private unsubscribeSearch: (() => void) | null = null;
   private unsubscribeAnswerVote: (() => void) | null = null;
   private snapshot: ReaderSnapshot;
   private dailyHotListSnapshot: DailyHotListSnapshot;
+  private recommendationFeedSnapshot: RecommendationFeedSnapshot;
   private authorAnswerListSnapshot: AuthorAnswerListSnapshot;
   private answerCommentListSnapshot: AnswerCommentListSnapshot;
   private searchSnapshot: ZhihuAnswerSearchSnapshot;
@@ -108,6 +115,7 @@ export class ZhihuAnswersView extends ItemView {
   private historyEntries: readonly QuestionHistoryEntry[];
   private isHistoryOpen = false;
   private isDailyHotListOpen = false;
+  private isRecommendationsOpen = false;
   private isCommentsOpen = false;
   private isSearchOpen = false;
   private shouldRecordQuery = false;
@@ -130,12 +138,14 @@ export class ZhihuAnswersView extends ItemView {
     super(leaf);
     this.session = new ReaderSession(gateway, optionsProvider);
     this.dailyHotList = new DailyHotList(gateway);
+    this.recommendationFeed = new RecommendationFeed(gateway);
     this.authorAnswerList = new AuthorAnswerList(gateway);
     this.answerCommentList = new AnswerCommentList(gateway);
     this.search = new ZhihuAnswerSearch(gateway);
     this.answerVote = new AnswerVoteController(gateway);
     this.snapshot = this.session.snapshot();
     this.dailyHotListSnapshot = this.dailyHotList.snapshot();
+    this.recommendationFeedSnapshot = this.recommendationFeed.snapshot();
     this.authorAnswerListSnapshot = this.authorAnswerList.snapshot();
     this.answerCommentListSnapshot = this.answerCommentList.snapshot();
     this.searchSnapshot = this.search.snapshot();
@@ -201,6 +211,12 @@ export class ZhihuAnswersView extends ItemView {
       this.dailyHotListSnapshot = snapshot;
       this.render();
     });
+    this.unsubscribeRecommendationFeed = this.recommendationFeed.subscribe(
+      (snapshot) => {
+        this.recommendationFeedSnapshot = snapshot;
+        this.render();
+      },
+    );
     this.unsubscribeAuthorAnswerList = this.authorAnswerList.subscribe(
       (snapshot) => {
         this.authorAnswerListSnapshot = snapshot;
@@ -228,6 +244,8 @@ export class ZhihuAnswersView extends ItemView {
     this.unsubscribeSession = null;
     this.unsubscribeDailyHotList?.();
     this.unsubscribeDailyHotList = null;
+    this.unsubscribeRecommendationFeed?.();
+    this.unsubscribeRecommendationFeed = null;
     this.unsubscribeAuthorAnswerList?.();
     this.unsubscribeAuthorAnswerList = null;
     this.unsubscribeAnswerCommentList?.();
@@ -238,6 +256,7 @@ export class ZhihuAnswersView extends ItemView {
     this.unsubscribeAnswerVote = null;
     this.session.dispose();
     this.dailyHotList.dispose();
+    this.recommendationFeed.dispose();
     this.authorAnswerList.dispose();
     this.answerCommentList.dispose();
     this.search.dispose();
@@ -262,6 +281,7 @@ export class ZhihuAnswersView extends ItemView {
 
   openHistoryPopover(): void {
     this.isDailyHotListOpen = false;
+    this.isRecommendationsOpen = false;
     this.isSearchOpen = false;
     this.isCommentsOpen = false;
     this.isHistoryOpen = true;
@@ -274,10 +294,24 @@ export class ZhihuAnswersView extends ItemView {
     }
     this.isHistoryOpen = false;
     this.isSearchOpen = false;
+    this.isRecommendationsOpen = false;
     this.isCommentsOpen = false;
     this.isDailyHotListOpen = true;
     this.render();
     void this.dailyHotList.load();
+  }
+
+  openRecommendationPopover(): void {
+    if (!this.hasNetworkAccess()) {
+      return;
+    }
+    this.isHistoryOpen = false;
+    this.isDailyHotListOpen = false;
+    this.isSearchOpen = false;
+    this.isCommentsOpen = false;
+    this.isRecommendationsOpen = true;
+    this.render();
+    void this.recommendationFeed.load();
   }
 
   openSearchPopover(): void {
@@ -286,6 +320,7 @@ export class ZhihuAnswersView extends ItemView {
     }
     this.isHistoryOpen = false;
     this.isDailyHotListOpen = false;
+    this.isRecommendationsOpen = false;
     this.isCommentsOpen = false;
     this.isSearchOpen = true;
     this.render();
@@ -295,6 +330,7 @@ export class ZhihuAnswersView extends ItemView {
     this.authSnapshot = snapshot;
     if (!this.hasNetworkAccess()) {
       this.isDailyHotListOpen = false;
+      this.isRecommendationsOpen = false;
       this.isSearchOpen = false;
       this.isCommentsOpen = false;
     }
@@ -413,6 +449,7 @@ export class ZhihuAnswersView extends ItemView {
         this.isHistoryOpen = !this.isHistoryOpen;
         if (this.isHistoryOpen) {
           this.isDailyHotListOpen = false;
+          this.isRecommendationsOpen = false;
           this.isSearchOpen = false;
         }
         this.render();
@@ -442,6 +479,7 @@ export class ZhihuAnswersView extends ItemView {
         if (this.isDailyHotListOpen) {
           this.isHistoryOpen = false;
           this.isSearchOpen = false;
+          this.isRecommendationsOpen = false;
           void this.dailyHotList.load();
         }
         this.render();
@@ -462,6 +500,46 @@ export class ZhihuAnswersView extends ItemView {
         this.isDailyHotListOpen = false;
         void this.openTarget({ type: "question", questionId });
       },
+      toggleRecommendations: () => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
+        this.isRecommendationsOpen = !this.isRecommendationsOpen;
+        if (this.isRecommendationsOpen) {
+          this.isHistoryOpen = false;
+          this.isDailyHotListOpen = false;
+          this.isSearchOpen = false;
+          this.isCommentsOpen = false;
+          void this.recommendationFeed.load();
+        }
+        this.render();
+      },
+      closeRecommendations: () => {
+        this.isRecommendationsOpen = false;
+        this.render();
+      },
+      refreshRecommendations: () => {
+        if (this.hasNetworkAccess()) {
+          void this.recommendationFeed.load(true);
+        }
+      },
+      loadMoreRecommendations: () => {
+        if (this.hasNetworkAccess()) {
+          void this.recommendationFeed.loadMore();
+        }
+      },
+      retryRecommendations: () => {
+        if (this.hasNetworkAccess()) {
+          void this.recommendationFeed.retry();
+        }
+      },
+      openRecommendation: (item) => {
+        if (!this.hasNetworkAccess()) {
+          return;
+        }
+        this.isRecommendationsOpen = false;
+        void this.openTarget(item.target);
+      },
       toggleSearch: () => {
         if (!this.hasNetworkAccess()) {
           return;
@@ -470,6 +548,7 @@ export class ZhihuAnswersView extends ItemView {
         if (this.isSearchOpen) {
           this.isHistoryOpen = false;
           this.isDailyHotListOpen = false;
+          this.isRecommendationsOpen = false;
           this.isCommentsOpen = false;
         }
         this.render();
@@ -536,6 +615,7 @@ export class ZhihuAnswersView extends ItemView {
         this.isCommentsOpen = true;
         this.isHistoryOpen = false;
         this.isDailyHotListOpen = false;
+        this.isRecommendationsOpen = false;
         this.isSearchOpen = false;
         void this.answerCommentList.showAnswer(answerId);
         this.render();
@@ -657,6 +737,8 @@ export class ZhihuAnswersView extends ItemView {
           isCommentsOpen={this.isCommentsOpen}
           search={this.searchSnapshot}
           isSearchOpen={this.isSearchOpen}
+          recommendations={this.recommendationFeedSnapshot}
+          isRecommendationsOpen={this.isRecommendationsOpen}
           isDailyHotListOpen={this.isDailyHotListOpen}
           saveState={this.currentSaveState()}
           voteState={this.currentVoteState()}

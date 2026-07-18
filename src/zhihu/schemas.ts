@@ -9,10 +9,12 @@ import type {
   CommentPage,
   QuestionReference,
   QuestionSummary,
+  RecommendationPage,
   SearchAnswerPage,
   SearchAnswerResult,
   ZhihuComment,
   ZhihuHotListItem,
+  ZhihuRecommendationItem,
   ZhihuAuthor,
 } from "@/domain/zhihu";
 
@@ -149,6 +151,60 @@ const zhihuHotListItemSchema = z
 
 const zhihuHotListResponseSchema = z.object({
   data: z.array(zhihuHotListItemSchema),
+});
+
+const recommendationQuestionSchema = z
+  .object({
+    type: z.literal("question").optional(),
+    id: z.union([z.string(), z.number()]).optional(),
+    title: z.string().optional(),
+    name: z.string().optional(),
+    url: z.string().optional(),
+    excerpt: z.string().catch(""),
+    answer_count: nonNegativeIntegerSchema,
+    follower_count: nonNegativeIntegerSchema,
+  })
+  .passthrough();
+
+const recommendationAnswerSchema = z
+  .object({
+    type: z.literal("answer"),
+    id: z.union([z.string(), z.number()]).optional(),
+    url: z.string().optional(),
+    excerpt: z.string().catch(""),
+    voteup_count: nonNegativeIntegerSchema,
+    comment_count: nonNegativeIntegerSchema,
+    author: zhihuAuthorSchema.nullish(),
+    question: recommendationQuestionSchema,
+  })
+  .passthrough();
+
+const recommendationTargetSchema = z.union([
+  recommendationAnswerSchema,
+  recommendationQuestionSchema.extend({ type: z.literal("question") }),
+]);
+
+const zhihuRecommendationsResponseSchema = z.object({
+  data: z.array(
+    z
+      .object({
+        id: z.union([z.string(), z.number()]).optional(),
+        target: z.unknown().optional(),
+        brief: z
+          .union([
+            z.string(),
+            z.object({ text: z.string().catch("") }).passthrough(),
+          ])
+          .optional(),
+      })
+      .passthrough(),
+  ),
+  paging: z
+    .object({
+      is_end: z.boolean().catch(false),
+      next: optionalUrlSchema,
+    })
+    .passthrough(),
 });
 
 const zhihuAuthorAnswerSchema = z
@@ -342,6 +398,26 @@ export function parseHotListResponse(text: string): readonly ZhihuHotListItem[] 
   });
 }
 
+export function parseRecommendationsResponse(text: string): RecommendationPage {
+  return validateResponse(() => {
+    const response = zhihuRecommendationsResponseSchema.parse(
+      parseResponseJson(text),
+    );
+    return {
+      items: response.data.flatMap((feed) => {
+        const target = recommendationTargetSchema.safeParse(feed.target);
+        if (!target.success) {
+          return [];
+        }
+        const item = toRecommendationItem(target.data, recommendationReason(feed.brief));
+        return item === null ? [] : [item];
+      }),
+      isEnd: response.paging.is_end,
+      nextPageUrl: response.paging.next ?? null,
+    };
+  });
+}
+
 export function parseAuthorAnswersResponse(text: string): AuthorAnswerPage {
   return validateResponse(() => {
     const response = zhihuAuthorAnswersResponseSchema.parse(
@@ -453,6 +529,102 @@ function toAnswerDocument(
       : { updatedTime: answer.updated_time }),
     question: toQuestionSummary(answer.question),
   };
+}
+
+function toRecommendationItem(
+  target: z.output<typeof recommendationTargetSchema>,
+  reason: string,
+): ZhihuRecommendationItem | null {
+  if (target.type === "answer") {
+    const answerId = stableRecommendationId(target.id, target.url, "answer");
+    const questionId = stableRecommendationId(
+      target.question.id,
+      target.question.url,
+      "question",
+    );
+    const title = target.question.title ?? target.question.name;
+    if (answerId === null || questionId === null || title === undefined) {
+      return null;
+    }
+    return {
+      id: `answer:${answerId}`,
+      target: { type: "answer", answerId, questionId },
+      title,
+      excerpt: target.excerpt,
+      ...(target.author?.name === undefined
+        ? {}
+        : { authorName: target.author.name }),
+      voteupCount: target.voteup_count,
+      commentCount: target.comment_count,
+      reason,
+    };
+  }
+
+  const questionId = stableRecommendationId(target.id, target.url, "question");
+  const title = target.title ?? target.name;
+  if (questionId === null || title === undefined) {
+    return null;
+  }
+  return {
+    id: `question:${questionId}`,
+    target: { type: "question", questionId },
+    title,
+    excerpt: target.excerpt,
+    voteupCount: 0,
+    commentCount: 0,
+    reason,
+  };
+}
+
+function recommendationReason(
+  brief: string | { readonly text: string } | undefined,
+): string {
+  const text = typeof brief === "string" ? brief : brief?.text;
+  if (text === undefined) {
+    return "为你推荐";
+  }
+  return humanReadableRecommendationReason(text);
+}
+
+function humanReadableRecommendationReason(value: string): string {
+  const text = value.trim();
+  if (text.length === 0 || (text[0] !== "{" && text[0] !== "[")) {
+    return text;
+  }
+  try {
+    const metadata = JSON.parse(text) as unknown;
+    if (typeof metadata !== "object" || metadata === null) {
+      return text;
+    }
+    if (!Array.isArray(metadata)) {
+      const candidate = metadata as Record<string, unknown>;
+      const humanText = candidate.text ?? candidate.reason;
+      if (typeof humanText === "string") {
+        return humanReadableRecommendationReason(humanText);
+      }
+    }
+    return "";
+  } catch {
+    return text;
+  }
+}
+
+function stableRecommendationId(
+  rawId: string | number | undefined,
+  rawUrl: string | undefined,
+  type: "answer" | "question",
+): string | null {
+  if (typeof rawId === "string" && /^\d+$/u.test(rawId)) {
+    return rawId;
+  }
+  if (typeof rawId === "number" && Number.isSafeInteger(rawId) && rawId >= 0) {
+    return String(rawId);
+  }
+  if (rawUrl === undefined) {
+    return null;
+  }
+  const pattern = type === "answer" ? /\/answers?\/(\d+)/u : /\/questions?\/(\d+)/u;
+  return pattern.exec(rawUrl)?.[1] ?? null;
 }
 
 function toAuthor(

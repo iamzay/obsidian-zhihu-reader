@@ -7,6 +7,7 @@ import {
   buildChildCommentsUrl,
   buildHotListUrl,
   buildQuestionFeedsUrl,
+  buildRecommendationsUrl,
   buildSearchAnswersUrl,
 } from "@/zhihu/urls";
 
@@ -126,6 +127,23 @@ describe("buildQuestionFeedsUrl", () => {
     );
     expect(() => buildHotListUrl(51)).toThrow(
       "Hot list limit must be an integer between 1 and 50.",
+    );
+  });
+
+  it("builds and validates the desktop recommendation feed URL", () => {
+    expect(buildRecommendationsUrl()).toBe(
+      "https://www.zhihu.com/api/v3/feed/topstory/recommend?desktop=true&limit=10",
+    );
+    const next =
+      "https://www.zhihu.com/api/v3/feed/topstory/recommend?desktop=true&limit=10&offset=10";
+    expect(buildRecommendationsUrl({ pageUrl: next })).toBe(next);
+    expect(() =>
+      buildRecommendationsUrl({
+        pageUrl: "https://example.com/api/v3/feed/topstory/recommend",
+      }),
+    ).toThrow("Invalid Zhihu recommendations page URL.");
+    expect(() => buildRecommendationsUrl({ limit: 21 })).toThrow(
+      "Recommendation limit must be an integer between 1 and 20.",
     );
   });
 

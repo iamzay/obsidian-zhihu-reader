@@ -17,6 +17,7 @@ import type { AuthorAnswerListSnapshot } from "@/author/AuthorAnswerList";
 import type { AnswerCommentListSnapshot } from "@/comments/AnswerCommentList";
 import type { DailyHotListSnapshot } from "@/hotlist/DailyHotList";
 import type { QuestionHistoryEntry } from "@/history/QuestionHistory";
+import type { RecommendationFeedSnapshot } from "@/recommendation/RecommendationFeed";
 import type { ZhihuAnswerSearchSnapshot } from "@/search/ZhihuAnswerSearch";
 import type { AnswerVoteState } from "@/vote/AnswerVoteController";
 import {
@@ -36,6 +37,10 @@ import {
   type HistoryPopoverActions,
 } from "@/view/reader/HistoryPopover";
 import { MarkdownContent } from "@/view/reader/MarkdownContent";
+import {
+  RecommendationPopover,
+  type RecommendationPopoverActions,
+} from "@/view/reader/RecommendationPopover";
 import {
   SearchPopover,
   type SearchPopoverActions,
@@ -62,6 +67,7 @@ export interface ReaderScreenActions
     DailyHotPopoverActions,
     AuthorAnswersPopoverActions,
     AnswerCommentsDialogActions,
+    RecommendationPopoverActions,
     SearchPopoverActions {
   readonly openUrlModal: () => void;
   readonly openFromClipboard: () => void;
@@ -91,6 +97,8 @@ export function ReaderScreen({
   isCommentsOpen,
   search,
   isSearchOpen,
+  recommendations,
+  isRecommendationsOpen,
   isDailyHotListOpen,
   saveState,
   voteState,
@@ -109,6 +117,8 @@ export function ReaderScreen({
   readonly isCommentsOpen: boolean;
   readonly search: ZhihuAnswerSearchSnapshot;
   readonly isSearchOpen: boolean;
+  readonly recommendations: RecommendationFeedSnapshot;
+  readonly isRecommendationsOpen: boolean;
   readonly isDailyHotListOpen: boolean;
   readonly saveState: AnswerSaveState;
   readonly voteState: AnswerVoteState | null;
@@ -134,6 +144,9 @@ export function ReaderScreen({
         search={search}
         isSearchOpen={isSearchOpen}
         searchActions={actions}
+        recommendations={recommendations}
+        isRecommendationsOpen={isRecommendationsOpen}
+        recommendationActions={actions}
       />
       {!hasNetworkAccess && snapshot.phase === "idle" && (
         <LoginRequiredState auth={auth} />
@@ -192,6 +205,9 @@ function ReaderToolbar({
   search,
   isSearchOpen,
   searchActions,
+  recommendations,
+  isRecommendationsOpen,
+  recommendationActions,
 }: {
   readonly auth: ZhihuAuthSnapshot;
   readonly hasNetworkAccess: boolean;
@@ -209,6 +225,9 @@ function ReaderToolbar({
   readonly search: ZhihuAnswerSearchSnapshot;
   readonly isSearchOpen: boolean;
   readonly searchActions: SearchPopoverActions;
+  readonly recommendations: RecommendationFeedSnapshot;
+  readonly isRecommendationsOpen: boolean;
+  readonly recommendationActions: RecommendationPopoverActions;
 }): React.JSX.Element {
   return (
     <header className="zhihu-reader-toolbar">
@@ -236,6 +255,12 @@ function ReaderToolbar({
           isOpen={isSearchOpen}
           disabled={!hasNetworkAccess}
           actions={searchActions}
+        />
+        <RecommendationPopover
+          snapshot={recommendations}
+          isOpen={isRecommendationsOpen}
+          disabled={!hasNetworkAccess}
+          actions={recommendationActions}
         />
         <DailyHotPopover
           snapshot={dailyHotList}

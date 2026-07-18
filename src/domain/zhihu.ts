@@ -123,6 +123,23 @@ export interface ZhihuHotListItem {
   readonly thumbnailUrl?: string;
 }
 
+export interface ZhihuRecommendationItem {
+  readonly id: string;
+  readonly target: ZhihuTarget;
+  readonly title: string;
+  readonly excerpt: string;
+  readonly authorName?: string;
+  readonly voteupCount: number;
+  readonly commentCount: number;
+  readonly reason: string;
+}
+
+export interface RecommendationPage {
+  readonly items: readonly ZhihuRecommendationItem[];
+  readonly isEnd: boolean;
+  readonly nextPageUrl: string | null;
+}
+
 export type ReaderPhase = "idle" | "loading" | "ready" | "error";
 export type AnswerOrder = "default" | "updated";
 

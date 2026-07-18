@@ -139,6 +139,7 @@
 
 .zhihu-history-popover-anchor,
 .zhihu-hot-popover-anchor,
+.zhihu-recommendation-popover-anchor,
 .zhihu-search-popover-anchor {
   position: relative;
 }
@@ -146,6 +147,7 @@
 .zhihu-hot-popover,
 .zhihu-history-popover,
 .zhihu-author-answers-popover,
+.zhihu-recommendation-popover,
 .zhihu-search-popover {
   position: absolute;
   z-index: var(--layer-popover);
@@ -165,6 +167,7 @@
 .zhihu-hot-popover > header,
 .zhihu-history-popover > header,
 .zhihu-author-answers-popover > header,
+.zhihu-recommendation-popover > header,
 .zhihu-search-popover > header {
   display: flex;
   align-items: center;
@@ -177,6 +180,7 @@
 .zhihu-hot-popover > header > div,
 .zhihu-history-popover > header > div,
 .zhihu-author-answers-popover > header > div,
+.zhihu-recommendation-popover > header > div,
 .zhihu-search-popover > header > div {
   display: flex;
   min-width: 0;
@@ -186,12 +190,14 @@
 .zhihu-hot-popover > header span,
 .zhihu-history-popover > header span,
 .zhihu-author-answers-popover > header span,
+.zhihu-recommendation-popover > header span,
 .zhihu-search-popover > header span {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
 .zhihu-hot-popover > header button,
+.zhihu-recommendation-popover > header button,
 .zhihu-history-popover > header button {
   flex: 0 0 auto;
 }
@@ -217,6 +223,7 @@
 .zhihu-hot-popover ol,
 .zhihu-history-popover ul,
 .zhihu-author-answers-popover ul,
+.zhihu-recommendation-popover ul,
 .zhihu-search-popover ul {
   min-height: 0;
   margin: 0;
@@ -229,6 +236,7 @@
 .zhihu-hot-popover li > button,
 .zhihu-history-popover li > .zhihu-history-popover__title,
 .zhihu-author-answers-popover li > button,
+.zhihu-recommendation-popover li > button,
 .zhihu-search-popover li > button {
   appearance: none;
   display: flex;
@@ -251,6 +259,8 @@
 .zhihu-history-popover li > .zhihu-history-popover__title:focus-visible,
 .zhihu-author-answers-popover li > button:hover,
 .zhihu-author-answers-popover li > button:focus-visible,
+.zhihu-recommendation-popover li > button:hover,
+.zhihu-recommendation-popover li > button:focus-visible,
 .zhihu-search-popover li > button:hover,
 .zhihu-search-popover li > button:focus-visible {
   color: var(--text-normal);
@@ -289,7 +299,8 @@
   -webkit-box-orient: vertical;
 }
 
-.zhihu-search-popover {
+.zhihu-search-popover,
+.zhihu-recommendation-popover {
   width: min(520px, calc(100vw - 24px));
 }
 
@@ -305,7 +316,8 @@
   flex: 1;
 }
 
-.zhihu-search-popover__state {
+.zhihu-search-popover__state,
+.zhihu-recommendation-popover__state {
   display: flex;
   min-height: 140px;
   align-items: center;
@@ -318,11 +330,14 @@
 }
 
 .zhihu-search-popover__state.is-error,
+.zhihu-recommendation-popover__state.is-error,
+.zhihu-recommendation-popover > footer > span[role="alert"],
 .zhihu-search-popover > footer > span[role="alert"] {
   color: var(--text-error);
 }
 
-.zhihu-search-popover__content {
+.zhihu-search-popover__content,
+.zhihu-recommendation-popover__content {
   display: flex;
   min-width: 0;
   flex: 1;
@@ -331,7 +346,9 @@
 }
 
 .zhihu-search-popover__content > strong,
-.zhihu-search-popover__content > span {
+.zhihu-search-popover__content > span,
+.zhihu-recommendation-popover__content > strong,
+.zhihu-recommendation-popover__content > span {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -339,16 +356,19 @@
   line-height: 1.4;
 }
 
-.zhihu-search-popover__content > span {
+.zhihu-search-popover__content > span,
+.zhihu-recommendation-popover__content > span {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
-.zhihu-search-popover__content > small {
+.zhihu-search-popover__content > small,
+.zhihu-recommendation-popover__content > small {
   color: var(--text-faint);
 }
 
-.zhihu-answers .zhihu-search-popover li > button {
+.zhihu-answers .zhihu-search-popover li > button,
+.zhihu-answers .zhihu-recommendation-popover li > button {
   appearance: none;
   box-sizing: border-box;
   display: flex;
@@ -367,7 +387,9 @@
 }
 
 .zhihu-answers .zhihu-search-popover li > button:hover,
-.zhihu-answers .zhihu-search-popover li > button:focus-visible {
+.zhihu-answers .zhihu-search-popover li > button:focus-visible,
+.zhihu-answers .zhihu-recommendation-popover li > button:hover,
+.zhihu-answers .zhihu-recommendation-popover li > button:focus-visible {
   background: var(--background-modifier-hover);
 }
 
@@ -377,7 +399,8 @@
   opacity: 0.55;
 }
 
-.zhihu-search-popover > footer {
+.zhihu-search-popover > footer,
+.zhihu-recommendation-popover > footer {
   display: flex;
   align-items: center;
   flex-direction: column;
