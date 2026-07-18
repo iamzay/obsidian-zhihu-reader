@@ -636,7 +636,7 @@ export class ZhihuAnswersView extends ItemView {
   private scrollReader(direction: 1 | -1): void {
     this.contentEl.scrollBy({
       top: direction * readerScrollDistance(this.contentEl.clientHeight),
-      behavior: "smooth",
+      behavior: "auto",
     });
   }
 
